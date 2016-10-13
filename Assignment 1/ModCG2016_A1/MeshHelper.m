@@ -10,9 +10,16 @@ classdef MeshHelper < handle
             % Find the axis-aligned bounding box of the mesh and return its
             % minimal and maximal corner vertices. Use the vertex trait
             % 'position' to find them.
-
-            p_min = [0 0 0];
-            p_max = [0.2 0.2 0.2];
+            
+            % Get all vertices' positions:
+            vertices = mesh.getAllVertices();
+            positions = vertices.getTrait('position');
+            
+            % As 'positions' is a matrix, p_min and p_max will be row vectors
+            % containing the min and max of each collumn:
+            p_min = min(positions);
+            p_max = max(positions);
+            
         end
         
         
