@@ -19,6 +19,10 @@ models = [
   {'venus.obj'}
 ];
 
+mesh_viewer.loadModel(strcat(baseModelPath, char(models(4))));
+while waitforbuttonpress ~= 1
+end;
+
 for i=1:size(models)
     
     mesh_viewer.loadModel(strcat(baseModelPath, char(models(i))));

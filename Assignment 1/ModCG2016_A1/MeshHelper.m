@@ -87,6 +87,47 @@ classdef MeshHelper < handle
             % the mean of the three corner vertices. 'normal' is the uniquely
             % defined outwards-facing normal of the face, given CCW winding of
             % the three corner vertices.
+            
+            % Get all faces of the mesh:
+            faces = mesh.getAllFaces();
+            
+            % Get the halfedge of each face:
+            halfedges = faces.halfedge();
+            
+            % Get the vertices positions of each face (triangle):
+            vertexPosition1 = halfedges.from().getTrait('position');
+            vertexPosition2 = halfedges.to().getTrait('position');
+            vertexPosition3 = halfedges.next().to().getTrait('position');
+            
+            % Get the edges of the triangle:
+            edge1 = vertexPosition2 - vertexPosition1;
+            edge2 = vertexPosition3 - vertexPosition2;
+            edge3 = vertexPosition1 - vertexPosition3;
+            
+            % Calculate the length of each length of the triangle:
+            edge1Length = sqrt(sum((edge1).^2, 2));
+            edge2Length = sqrt(sum((edge2).^2, 2));
+            edge3Length = sqrt(sum((edge3).^2, 2));
+            
+            % Calculate the area of the triangle, using the Heron's
+            % Formula:
+            halfPerimeter = (edge1Length + edge2Length + edge3Length) ./ 2;
+            area = sqrt(halfPerimeter .* (halfPerimeter - edge1Length) .* (halfPerimeter - edge2Length) .* (halfPerimeter - edge3Length));
+            
+            % Calculate the centroid of each triangle, which is just the
+            % arithmetic mean of its vertices:
+            centroid = (vertexPosition1 + vertexPosition2 + vertexPosition3) ./ 3;
+            
+            % Calculate the normal of the face, using the cross product and
+            % then normalize them:
+            normals = cross(edge1, edge2, 2);
+            normals = normals ./ sqrt(sum(normals.^2, 2));
+            
+            % Write traits:
+            faces.setTrait('area', area);
+            faces.setTrait('centroid', centroid);
+            faces.setTrait('normal', normals);
+                        
         end
         
         function calculateVertexTraits(mesh)
