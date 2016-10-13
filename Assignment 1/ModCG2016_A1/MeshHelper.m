@@ -37,8 +37,40 @@ classdef MeshHelper < handle
             % face index equals zero). Make sure to test your
             % implementation for meshes with and without boundary.
 
-            V_start = zeros(0,3);
-            V_end = zeros(0,3);
+            % Get all halfedges:
+            halfedges = mesh.getAllHalfedges();
+            
+            % For boundary halfedges, the faces returned have index 0:
+            incidentFaces = halfedges.face();
+            
+            % Find all faces' indices which have index 0:
+            boundaryFacesIndices = incidentFaces.index(:, 1) == 0;
+            
+            % Get all boundary halfedges indices using the indices of the faces:
+            boundaryHalfedgesIndices = halfedges.index(1, boundaryFacesIndices');
+            
+            % If there are no boundary halfedges, then the model has no
+            % boundaries:
+            if(isempty(boundaryHalfedgesIndices))
+                V_start = [];
+                V_end = [];
+                return;
+            end
+            
+            % Get all boundary halfedges using the previous calculated indices:
+            boundaryHalfedges = mesh.getHalfedge(boundaryHalfedgesIndices);
+            
+            % Get all boundary edges:
+            boundaryEdges = boundaryHalfedges.edge();
+            
+            % Get all starting and ending vertices of the boundary halfedges:
+            startVertices = boundaryHalfedges.from();
+            endVertices = boundaryHalfedges.to();
+            
+            % Output the results:
+            V_start = startVertices.getTrait('position');
+            V_end = endVertices.getTrait('position');
+            
         end
         
         
