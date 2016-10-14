@@ -203,6 +203,7 @@ classdef MeshHelper < handle
             % angle(e1^2) = acos((e1 . e2) ./ (||e1|| * ||e2||))
             angles = acos(sum(edgeVector1 .* edgeVector2, 2) ./ (MeshHelper.lengthOfRowVectors(edgeVector1) .* MeshHelper.lengthOfRowVectors(edgeVector2)));
             
+            % Output result:
             currentHalfedges.setTrait('angle', angles);
             
         end
@@ -264,6 +265,35 @@ classdef MeshHelper < handle
                     % the adjacent face normals, where the weight is given
                     % by the angle that the face confines at the vertex.
                     % Use the 'angle' halfedge trait computed in Task 5a for this.
+                    
+                    % Get all faces:
+                    faces = mesh.getAllFaces();
+                    
+                    % Each face has an halfedge:
+                    halfedges = faces.halfedge();
+                   
+                    % Calculate the normal*weight for each face, and
+                    % replicate the values 3 times over a matrix with
+                    % dimensions [number_of_faces*3, 3]:
+                    normals = repmat(faces.getTrait('normal') .* halfedges.getTrait('angle'), [3, 1]);
+                    
+                    % Get the indices of the vertices of each face and
+                    % concatenate everything in a matrix with dimensions
+                    % [number_of_faces*3, 3]. From [1, number_of_faces],
+                    % it's the first vertex of each face. From
+                    % [number_of_faces + 1, 2*number_of_faces] it's the
+                    % second vertex of each face and from
+                    % [2*number_of_faces + 1, 3*number_of_faces] it's the
+                    % third vertex of each face.
+                    vertices = [ halfedges.from().index ; halfedges.to().index ; halfedges.next().to().index ];
+                    
+                    % Sum all normals by vertex index and normalize them:
+                    normalsByVertex = MeshHelper.sumRowVectorsByIndex(vertices, normals);
+                    normalsByVertex = MeshHelper.normalizeRowVectors(normalsByVertex);
+                    
+                    % Output result:
+                    mesh.getAllVertices().setTrait('normal', normalsByVertex);
+                    
             end
         end
     end
