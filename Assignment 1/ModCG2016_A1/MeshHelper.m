@@ -1,6 +1,27 @@
 classdef MeshHelper < handle
     methods(Static)
         
+        function rowVectors = normalizeRowVectors(rowVectors)
+            
+            rowVectors = rowVectors ./ sqrt(sum(rowVectors.^2, 2));
+            
+        end
+        
+        function sum = sumRowVectorsByIndex(indices, rowVectors)
+            
+            % Replicate the row and column indices:
+            numColumns = size(rowVectors, 2);
+            subscripts = [ 
+                repmat(indices(:), numColumns, 1) ...
+                kron(1:numColumns, ones(1, numel(indices))).'
+                ];
+            
+            % Sum all row vectors by index:
+            sum = accumarray(subscripts, rowVectors(:));
+            
+        end
+        
+        
         function [p_min, p_max] = getBoundingBox(mesh)
             % Returns the points with minimal and maximal coordinates of the
             % smallest axis-aligned bounding box of the mesh.
@@ -59,9 +80,6 @@ classdef MeshHelper < handle
             
             % Get all boundary halfedges using the previous calculated indices:
             boundaryHalfedges = mesh.getHalfedge(boundaryHalfedgesIndices);
-            
-            % Get all boundary edges:
-            boundaryEdges = boundaryHalfedges.edge();
             
             % Get all starting and ending vertices of the boundary halfedges:
             startVertices = boundaryHalfedges.from();
@@ -130,6 +148,8 @@ classdef MeshHelper < handle
                         
         end
         
+
+        
         function calculateVertexTraits(mesh)
             % Computes the degree of each vertex and stores it in the
             % vertex trait 'degree'.
@@ -176,7 +196,19 @@ classdef MeshHelper < handle
                     % the vertex normals as weighted averages of the
                     % adjacent face normals, where the weight is given by
                     % the surface area of the face. Don't forget to
-                    % normalize!
+                    % normalize!                
+                    
+                    faces = mesh.getAllFaces();
+                    halfedges = faces.halfedge();
+                   
+                    normals = repmat(faces.getTrait('normal') .* faces.getTrait('area'), [3, 1]);
+                    vertices = [ halfedges.from().index ; halfedges.to().index ; halfedges.next().to().index ];
+                    
+                    normalsByVertex = MeshHelper.sumRowVectorsByIndex(vertices, normals);
+                    normalsByVertex = MeshHelper.normalizeRowVectors(normalsByVertex);
+                    
+                    mesh.getAllVertices().setTrait('normal', normalsByVertex);
+                    
                 case 'angle'
                     % TODO_A1 Task 5b
                     %
