@@ -27,6 +27,58 @@ classdef MeshHelper < handle
             
         end
         
+        function array = removeValuesFromArray(array, values)
+            
+            array(intersect(array, values)) = [];
+            array = setdiff(array, values);
+            
+        end
+        
+        function boundaryHalfedges = getAllBoundaryHalfedges(mesh)
+            
+            % Get all halfedges:
+            halfedges = mesh.getAllHalfedges();
+            
+            % For boundary halfedges, the faces returned have index 0:
+            incidentFaces = halfedges.face();
+            
+            % Find all faces' indices which have index 0:
+            boundaryFacesIndices = incidentFaces.index(:, 1) == 0;
+            
+            % Get all boundary halfedges indices using the indices of the faces:
+            boundaryHalfedgesIndices = halfedges.index(1, boundaryFacesIndices');
+            
+            % If there are no boundary halfedges, then the model has no
+            % boundaries:
+            if(isempty(boundaryHalfedgesIndices))
+                boundaryHalfedges = [];
+                return;
+            end
+            
+            % Get all boundary halfedges using the previous calculated indices:
+            boundaryHalfedges = mesh.getHalfedge(boundaryHalfedgesIndices);
+            
+        end
+        
+        function nonBoundaryHalfedges = getAllNonBoundaryHalfedges(mesh)
+           
+            % Get all halfedges:
+            halfedges = mesh.getAllHalfedges();
+            
+            % Get all boundary halfedges:
+            boundaryHalfedges = MeshHelper.getAllBoundaryHalfedges(mesh);
+            
+            if(isempty(boundaryHalfedges))
+                nonBoundaryHalfedges = halfedges;
+                return;
+            end
+            
+            % Remove all boundary halfedges:
+            nonBoundaryHalfedgesIndices = MeshHelper.removeValuesFromArray(halfedges.index, boundaryHalfedges.index);
+            nonBoundaryHalfedges = mesh.getHalfedge(nonBoundaryHalfedgesIndices);
+            
+        end
+        
         
         function [p_min, p_max] = getBoundingBox(mesh)
             % Returns the points with minimal and maximal coordinates of the
@@ -64,28 +116,16 @@ classdef MeshHelper < handle
             % face index equals zero). Make sure to test your
             % implementation for meshes with and without boundary.
 
-            % Get all halfedges:
-            halfedges = mesh.getAllHalfedges();
-            
-            % For boundary halfedges, the faces returned have index 0:
-            incidentFaces = halfedges.face();
-            
-            % Find all faces' indices which have index 0:
-            boundaryFacesIndices = incidentFaces.index(:, 1) == 0;
-            
-            % Get all boundary halfedges indices using the indices of the faces:
-            boundaryHalfedgesIndices = halfedges.index(1, boundaryFacesIndices');
+            % Get all boundary halfedges:
+            boundaryHalfedges = MeshHelper.getAllBoundaryHalfedges(mesh);
             
             % If there are no boundary halfedges, then the model has no
             % boundaries:
-            if(isempty(boundaryHalfedgesIndices))
+            if(isempty(boundaryHalfedges))
                 V_start = [];
                 V_end = [];
                 return;
             end
-            
-            % Get all boundary halfedges using the previous calculated indices:
-            boundaryHalfedges = mesh.getHalfedge(boundaryHalfedgesIndices);
             
             % Get all starting and ending vertices of the boundary halfedges:
             startVertices = boundaryHalfedges.from();
@@ -153,8 +193,6 @@ classdef MeshHelper < handle
             faces.setTrait('normal', normals);
                         
         end
-        
-
         
         function calculateVertexTraits(mesh)
             % Computes the degree of each vertex and stores it in the
@@ -229,10 +267,10 @@ classdef MeshHelper < handle
                     % the surface area of the face. Don't forget to
                     % normalize!                
                     
-                    % Get all halfedges:
-                    halfedges = mesh.getAllHalfedges();
-
-                    % Each halfedge has an incident face:
+                    % Get all non-boundary halfedges:
+                    halfedges = MeshHelper.getAllNonBoundaryHalfedges(mesh);
+                                        
+                    % Each non-boundary halfedge has an incident face:
                     faces = halfedges.face();
 
                     % Calculate the normal associated with each halfedge by
@@ -258,11 +296,11 @@ classdef MeshHelper < handle
                     % the adjacent face normals, where the weight is given
                     % by the angle that the face confines at the vertex.
                     % Use the 'angle' halfedge trait computed in Task 5a for this.
-                   
-                    % Get all halfedges:
-                    halfedges = mesh.getAllHalfedges();
-
-                    % Each halfedge has an incident face:
+                    
+                    % Get all non-boundary halfedges:
+                    halfedges = MeshHelper.getAllNonBoundaryHalfedges(mesh);
+                                        
+                    % Each non-boundary halfedge has an incident face:
                     faces = halfedges.face();
 
                     % Calculate the normal associated with each halfedge by
