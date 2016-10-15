@@ -229,29 +229,22 @@ classdef MeshHelper < handle
                     % the surface area of the face. Don't forget to
                     % normalize!                
                     
-                    % Get all faces:
-                    faces = mesh.getAllFaces();
+                    % Get all halfedges:
+                    halfedges = mesh.getAllHalfedges();
+
+                    % Each halfedge has an incident face:
+                    faces = halfedges.face();
+
+                    % Calculate the normal associated with each halfedge by
+                    % multiplying the normal and the area of its incident
+                    % face:
+                    normals = faces.getTrait('normal') .* faces.getTrait('area');
                     
-                    % Each face has an halfedge:
-                    halfedges = faces.halfedge();
-                   
-                    % Calculate the normal*weight for each face, and
-                    % replicate the values 3 times over a matrix with
-                    % dimensions [number_of_faces*3, 3]:
-                    normals = repmat(faces.getTrait('normal') .* faces.getTrait('area'), [3, 1]);
-                    
-                    % Get the indices of the vertices of each face and
-                    % concatenate everything in a matrix with dimensions
-                    % [number_of_faces*3, 3]. From [1, number_of_faces],
-                    % it's the first vertex of each face. From
-                    % [number_of_faces + 1, 2*number_of_faces] it's the
-                    % second vertex of each face and from
-                    % [2*number_of_faces + 1, 3*number_of_faces] it's the
-                    % third vertex of each face.
-                    vertices = [ halfedges.from().index ; halfedges.to().index ; halfedges.next().to().index ];
-                    
-                    % Sum all normals by vertex index and normalize them:
-                    normalsByVertex = MeshHelper.sumRowVectorsByIndex(vertices, normals);
+                    % Each halfedge has an origin vertex:
+                    vertices = halfedges.from();
+                
+                    % Sum all normals associated with each vertex and normalize them:
+                    normalsByVertex = MeshHelper.sumRowVectorsByIndex(vertices.index, normals);
                     normalsByVertex = MeshHelper.normalizeRowVectors(normalsByVertex);
                     
                     % Output result:
@@ -265,35 +258,28 @@ classdef MeshHelper < handle
                     % the adjacent face normals, where the weight is given
                     % by the angle that the face confines at the vertex.
                     % Use the 'angle' halfedge trait computed in Task 5a for this.
-                    
-                    % Get all faces:
-                    faces = mesh.getAllFaces();
-                    
-                    % Each face has an halfedge:
-                    halfedges = faces.halfedge();
                    
-                    % Calculate the normal*weight for each face, and
-                    % replicate the values 3 times over a matrix with
-                    % dimensions [number_of_faces*3, 3]:
-                    normals = repmat(faces.getTrait('normal') .* halfedges.getTrait('angle'), [3, 1]);
+                    % Get all halfedges:
+                    halfedges = mesh.getAllHalfedges();
+
+                    % Each halfedge has an incident face:
+                    faces = halfedges.face();
+
+                    % Calculate the normal associated with each halfedge by
+                    % multiplying the normal of its incident face by the
+                    % angle of the halfedge:
+                    normals = faces.getTrait('normal') .* halfedges.getTrait('angle');
                     
-                    % Get the indices of the vertices of each face and
-                    % concatenate everything in a matrix with dimensions
-                    % [number_of_faces*3, 3]. From [1, number_of_faces],
-                    % it's the first vertex of each face. From
-                    % [number_of_faces + 1, 2*number_of_faces] it's the
-                    % second vertex of each face and from
-                    % [2*number_of_faces + 1, 3*number_of_faces] it's the
-                    % third vertex of each face.
-                    vertices = [ halfedges.from().index ; halfedges.to().index ; halfedges.next().to().index ];
-                    
-                    % Sum all normals by vertex index and normalize them:
-                    normalsByVertex = MeshHelper.sumRowVectorsByIndex(vertices, normals);
+                    % Each halfedge has an origin vertex:
+                    vertices = halfedges.from();
+                
+                    % Sum all normals associated with each vertex and normalize them:
+                    normalsByVertex = MeshHelper.sumRowVectorsByIndex(vertices.index, normals);
                     normalsByVertex = MeshHelper.normalizeRowVectors(normalsByVertex);
                     
                     % Output result:
                     mesh.getAllVertices().setTrait('normal', normalsByVertex);
-                    
+
             end
         end
     end
