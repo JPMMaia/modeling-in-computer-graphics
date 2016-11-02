@@ -8,8 +8,17 @@ classdef MeshSmoothing < handle
             %
             % Perform explicit mesh smoothing, as described in the
             % slides and in [Desbrun1999], Section 2.2.
-
-            V_smooth = mesh.toFaceVertexMesh();
+            
+            % Compute (I + lambda*L):
+            numberOfVertices = mesh.num_vertices;
+            operatorMatrix = (speye(numberOfVertices) + lambda .* L);
+            
+            % Get all vertices positions:
+            verticesPositions = mesh.getAllVertices().getTrait('position');
+            
+            % Compute (I + lambda*L) * x:
+            V_smooth = operatorMatrix * verticesPositions;
+            
         end
         
         function V_smooth = implicitSmoothing(mesh, L, lambda)
