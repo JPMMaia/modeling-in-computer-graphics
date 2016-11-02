@@ -58,32 +58,38 @@ classdef MeshLaplacian < handle
             numberOfVertices = mesh.num_vertices;
             
             % L(i, j) = -1, if i = j:
-            diagonalValues = -ones(1, numberOfVertices);
             diagonalRows = [ 1:numberOfVertices ];
             diagonalColumns = [ 1:numberOfVertices ];
+            diagonalValues = -ones(1, numberOfVertices);
             
             % L(i, j) = w[i,j], if i and j belong to the same edge.
-            % For uniform laplacian, w[i, j] = 1:
-            halfedges = mesh.getAllHalfedges();
-            weightValues = ones(1, mesh.num_halfedges); 
+            % For uniform laplacian (non-normalized), w[i, j] = 1:
+            halfedges = mesh.getAllHalfedges(); 
             weightRows = halfedges.from().index';
             weightColumns = halfedges.to().index';
-            
-            L = sparse([diagonalRows weightRows], [diagonalColumns weightColumns], [diagonalValues weightValues], numberOfVertices, numberOfVertices);
-
-            % TODO test
+            weightValues = ones(1, mesh.num_halfedges);
             
             % TODO_A2 Task 5a
             %
             % Extend this method to compute a non-normalized version of
             % the mesh Laplacian with uniform weights.
-
-%             nv = mesh.num_vertices;
-%             if normalized
-%                 L = sparse(nv,nv);
-%             else
-%                 L = sparse(nv,nv);
-%             end
+            
+            % Calculate the non-normalized version of the mesh Laplacian:
+            L = sparse([diagonalRows weightRows], [diagonalColumns weightColumns], [diagonalValues weightValues], numberOfVertices, numberOfVertices);
+            
+            % If the 'normalized' flag is set, then normalize the matrix:
+            if normalized
+                
+                % Normalize matrix. The sum of each row should be 0. The
+                % sum of each row of the non-normalized matrix is equal to
+                % the sum of all weights plus the diagonal element which
+                % has a value of -1 (therefore it must be offsetted by + 1).
+                L = L ./ (sum(L, 2) + 1);
+                
+            end
+            
+            % TODO something must be wrong...
+            
         end
         
         function L = computeCotangentLaplacian(mesh, normalized)
@@ -114,28 +120,32 @@ classdef MeshLaplacian < handle
             diagonalColumns = [ 1:numberOfVertices ];
             
             % L(i, j) = w[i,j], if i and j belong to the same edge.
-            % For cotangent laplacian, w[i, j] = cot(alpha) + cot(beta):
+            % For cotangent laplacian (non-normalized), w[i, j] = cot(alpha) + cot(beta):
             halfedges = mesh.getAllHalfedges();
             [alphas, betas] = MeshLaplacian.computeAngles(halfedges);
             weightValues = (alphas + betas)';
             weightRows = halfedges.from().index';
             weightColumns = halfedges.to().index';
             
-            L = sparse([diagonalRows weightRows], [diagonalColumns weightColumns], [diagonalValues weightValues], numberOfVertices, numberOfVertices);
-            
-            % TODO test
-            
             % TODO_A2 Task 5a
             %
             % Extend this method to compute a non-normalized version of
             % the mesh Laplacian with Cotangent weights.
 
-%            nv = mesh.num_vertices;
-%            if normalized
-%                L = sparse(nv,nv);
-%            else
-%                L = sparse(nv,nv);
-%            end
+            % Calculate the non-normalized version of the mesh Laplacian:
+            L = sparse([diagonalRows weightRows], [diagonalColumns weightColumns], [diagonalValues weightValues], numberOfVertices, numberOfVertices);
+            
+            % If the 'normalized' flag is set, then normalize the matrix:
+            if normalized
+                
+                % Normalize matrix. The sum of each row should be 0. The
+                % sum of each row of the non-normalized matrix is equal to
+                % the sum of all weights plus the diagonal element which
+                % has a value of -1 (therefore it must be offsetted by + 1).
+                L = L ./ (sum(L, 2) + 1);
+                
+            end
+            
         end
     end
 end
