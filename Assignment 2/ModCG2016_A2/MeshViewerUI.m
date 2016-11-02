@@ -59,6 +59,7 @@ classdef MeshViewerUI < handle
     
     methods
         function obj = MeshViewerUI()
+            
             obj.fig = figure('Name','ModCG Mesh Viewer',...
                 'Visible','off','Position',[360,500,1200,600]);
             

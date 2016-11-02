@@ -15,18 +15,38 @@ classdef MeshLaplacian < handle
             % indices, column indices, and values of non-zeros matrix
             % entries. For a detailed defintion, see the lecture slides
             % and [Nealen2006].
+            
+            % Get all vertices:
+            vertices = mesh.getAllVertices();
+            
+            % The laplacian matrix is a 'n' x 'n' matrix, in which 'n'
+            % denotes the number of vertices:
+            numberOfVertices = mesh.num_vertices;
+            
+            % L(i, j) = -1, if i = j:
+            diagonalValues = -ones(1, numberOfVertices);
+            diagonalRows = [ 1:numberOfVertices ];
+            diagonalColumns = [ 1:numberOfVertices ];
+            
+            % L(i, j) = w[i,j], if i and j belong to the same edge:
+            halfedges = mesh.getAllHalfedges();
+            weightValues = ones(1, mesh.num_halfedges); 
+            weightRows = halfedges.from().index';
+            weightColumns = halfedges.to().index';
+            
+            L = sparse([diagonalRows weightRows], [diagonalColumns weightColumns], [diagonalValues weightValues], numberOfVertices, numberOfVertices);
 
             % TODO_A2 Task 5a
             %
             % Extend this method to compute a non-normalized version of
             % the mesh Laplacian with uniform weights.
 
-            nv = mesh.num_vertices;
-            if normalized
-                L = sparse(nv,nv);
-            else
-                L = sparse(nv,nv);
-            end
+            %nv = mesh.num_vertices;
+            %if normalized
+%                L = sparse(nv,nv);
+%            else
+%                L = sparse(nv,nv);
+%            end
         end
         
         function L = computeCotangentLaplacian(mesh, normalized)
