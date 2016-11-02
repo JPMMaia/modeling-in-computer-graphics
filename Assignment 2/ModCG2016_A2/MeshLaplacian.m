@@ -37,6 +37,46 @@ classdef MeshLaplacian < handle
             
         end
         
+        function L = computeLaplacian(mesh, normalized, weightValues)
+           
+            % The laplacian matrix is a 'n' x 'n' matrix, in which 'n'
+            % denotes the number of vertices:
+            numberOfVertices = mesh.num_vertices;
+            
+            % L(i, j) = -1, if i = j:
+            diagonalRows = 1:numberOfVertices;
+            diagonalColumns = 1:numberOfVertices;
+            diagonalValues = -ones(1, numberOfVertices);
+            
+            % L(i, j) = w[i,j], if i and j belong to the same edge:
+            halfedges = mesh.getAllHalfedges(); 
+            weightRows = halfedges.from().index';
+            weightColumns = halfedges.to().index';
+            
+            if normalized
+               
+                % Calculate a sparse matrix with the weights only:
+                LWeights = sparse(weightRows, weightColumns, weightValues, numberOfVertices, numberOfVertices);
+                
+                % Calculate the sum all weights by row:
+                sumsByRow = sum(LWeights, 2);
+                
+                % Normalize weights:
+                LWeights = LWeights ./ sumsByRow;
+                
+                % Compute the normalized version of the mesh Laplacian, by
+                % adding the diagonals to the normalized weights:
+                L = LWeights + sparse(diagonalRows, diagonalColumns, diagonalValues, numberOfVertices, numberOfVertices);
+                
+            else
+                
+                % Calculate the non-normalized version of the mesh Laplacian:
+                L = sparse([diagonalRows weightRows], [diagonalColumns weightColumns], [diagonalValues weightValues], numberOfVertices, numberOfVertices);
+                
+            end
+            
+        end
+        
         function L = computeUniformLaplacian(mesh, normalized)
             % Returns the mesh Laplacian with uniform weights as a sparse
             % nv-by-nv matrix, where nv is the number of vertices in the mesh.
@@ -53,42 +93,15 @@ classdef MeshLaplacian < handle
             % entries. For a detailed defintion, see the lecture slides
             % and [Nealen2006].
             
-            % The laplacian matrix is a 'n' x 'n' matrix, in which 'n'
-            % denotes the number of vertices:
-            numberOfVertices = mesh.num_vertices;
-            
-            % L(i, j) = -1, if i = j:
-            diagonalRows = [ 1:numberOfVertices ];
-            diagonalColumns = [ 1:numberOfVertices ];
-            diagonalValues = -ones(1, numberOfVertices);
-            
-            % L(i, j) = w[i,j], if i and j belong to the same edge.
-            % For uniform laplacian (non-normalized), w[i, j] = 1:
-            halfedges = mesh.getAllHalfedges(); 
-            weightRows = halfedges.from().index';
-            weightColumns = halfedges.to().index';
-            weightValues = ones(1, mesh.num_halfedges);
-            
             % TODO_A2 Task 5a
             %
             % Extend this method to compute a non-normalized version of
             % the mesh Laplacian with uniform weights.
             
-            % Calculate the non-normalized version of the mesh Laplacian:
-            L = sparse([diagonalRows weightRows], [diagonalColumns weightColumns], [diagonalValues weightValues], numberOfVertices, numberOfVertices);
+            % For uniform laplacian, w[i, j] = 1:
+            weightValues = ones(1, mesh.num_halfedges);
             
-            % If the 'normalized' flag is set, then normalize the matrix:
-            if normalized
-                
-                % Normalize matrix. The sum of each row should be 0. The
-                % sum of each row of the non-normalized matrix is equal to
-                % the sum of all weights plus the diagonal element which
-                % has a value of -1 (therefore it must be offsetted by + 1).
-                L = L ./ (sum(L, 2) + 1);
-                
-            end
-            
-            % TODO something must be wrong...
+            L = MeshLaplacian.computeLaplacian(mesh, normalized, weightValues);
             
         end
         
@@ -109,42 +122,20 @@ classdef MeshLaplacian < handle
             % entries. For a detailed defintion, see the lecture slides
             % and [Nealen2006]. Note that a halfedge trait 'cot_angle'
             % is already added by MeshHelper.calculateHalfedgeTraits().
-
-            % The laplacian matrix is a 'n' x 'n' matrix, in which 'n'
-            % denotes the number of vertices:
-            numberOfVertices = mesh.num_vertices;
-            
-            % L(i, j) = -1, if i = j:
-            diagonalValues = -ones(1, numberOfVertices);
-            diagonalRows = [ 1:numberOfVertices ];
-            diagonalColumns = [ 1:numberOfVertices ];
-            
-            % L(i, j) = w[i,j], if i and j belong to the same edge.
-            % For cotangent laplacian (non-normalized), w[i, j] = cot(alpha) + cot(beta):
-            halfedges = mesh.getAllHalfedges();
-            [alphas, betas] = MeshLaplacian.computeAngles(halfedges);
-            weightValues = (alphas + betas)';
-            weightRows = halfedges.from().index';
-            weightColumns = halfedges.to().index';
             
             % TODO_A2 Task 5a
             %
             % Extend this method to compute a non-normalized version of
             % the mesh Laplacian with Cotangent weights.
 
-            % Calculate the non-normalized version of the mesh Laplacian:
-            L = sparse([diagonalRows weightRows], [diagonalColumns weightColumns], [diagonalValues weightValues], numberOfVertices, numberOfVertices);
+            % For cotangent laplacian, w[i, j] = cot(alpha) + cot(beta):
+            halfedges = mesh.getAllHalfedges();
+            [alphas, betas] = MeshLaplacian.computeAngles(halfedges);
+            weightValues = (alphas + betas)';
             
-            % If the 'normalized' flag is set, then normalize the matrix:
-            if normalized
-                
-                % Normalize matrix. The sum of each row should be 0. The
-                % sum of each row of the non-normalized matrix is equal to
-                % the sum of all weights plus the diagonal element which
-                % has a value of -1 (therefore it must be offsetted by + 1).
-                L = L ./ (sum(L, 2) + 1);
-                
-            end
+            L = MeshLaplacian.computeLaplacian(mesh, normalized, weightValues);
+            
+            % TODO TEST THIS
             
         end
     end
