@@ -131,11 +131,9 @@ classdef MeshLaplacian < handle
             % For cotangent laplacian, w[i, j] = cot(alpha) + cot(beta):
             halfedges = mesh.getAllHalfedges();
             [alphas, betas] = MeshLaplacian.computeAngles(halfedges);
-            weightValues = (alphas + betas)';
+            weightValues = (cot(alphas) + cot(betas))';
             
             L = MeshLaplacian.computeLaplacian(mesh, normalized, weightValues);
-            
-            % TODO TEST THIS
             
         end
     end
