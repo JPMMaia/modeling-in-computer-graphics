@@ -19,6 +19,8 @@ classdef MeshSmoothing < handle
             % Compute (I + lambda*L) * x:
             V_smooth = iPlusLamdaL * verticesPositions;
             
+            % TODO FIX SMOOTHING
+            
         end
         
         function V_smooth = implicitSmoothing(mesh, L, lambda)
@@ -51,11 +53,29 @@ classdef MeshSmoothing < handle
             %
             % Implement least-squares mesh smoothing as described in
             % the slides and in [Nealen2006].
-
-            V_smooth = mesh.toFaceVertexMesh();
+            
+            vertexCount = mesh.num_vertices;
+            m = 10;
+            
+            % Get all vertices positions:
+            vertexPositions = mesh.getAllVertices().getTrait('position');
+            
+            mVertices = vertexPositions(1:m, :);
+            Wp1 = eye(m, vertexCount) .* wp;
+            Wp2 = eye(m, vertexCount + m) .* wp;
+            Wl1 = eye(vertexCount, vertexCount) .* wl;
+            Wl2 = eye(vertexCount, vertexCount + m) .* wl;
+            
+            A = [ L ; Wp1 ];
+            b = [ zeros(vertexCount, 3) ; mVertices ];
+            
+            V_smooth = inv(A' * A) * A' * b;
+            
+            % TODO
+            
         end
         
-        function V_smooth = triangleSmoothing(mesh,L_uniform,L_Cotangent,wl,wp)
+        function V_smooth = triangleSmoothing(mesh, L_uniform, L_Cotangent, wl, wp)
             % Performs detail preserving triangle shape optimization as
             % described in [Nealen2006]. wl are the weights for the
             % triangle shape optimization rows, and wp the weights for the
@@ -66,6 +86,8 @@ classdef MeshSmoothing < handle
             % Implement detail preserving triangle shape optimization
             % mesh smoothing as described in the slides and in
             % [Nealen2006].
+            
+            
 
             V_smooth = mesh.toFaceVertexMesh();
         end
