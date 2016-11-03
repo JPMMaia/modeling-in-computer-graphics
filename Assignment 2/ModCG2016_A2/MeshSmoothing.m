@@ -11,13 +11,13 @@ classdef MeshSmoothing < handle
             
             % Compute (I + lambda*L):
             numberOfVertices = mesh.num_vertices;
-            operatorMatrix = (speye(numberOfVertices) + lambda .* L);
+            iPlusLamdaL = (speye(numberOfVertices) + lambda .* L);
             
             % Get all vertices positions:
             verticesPositions = mesh.getAllVertices().getTrait('position');
             
             % Compute (I + lambda*L) * x:
-            V_smooth = operatorMatrix * verticesPositions;
+            V_smooth = iPlusLamdaL * verticesPositions;
             
         end
         
@@ -29,8 +29,17 @@ classdef MeshSmoothing < handle
             %
             % Perform implicit mesh smoothing, as described in the
             % slides and in [Desbrun1999], Section 2.3.
-
-            V_smooth = mesh.toFaceVertexMesh();
+            
+            % Compute (I - lambda*dt*L) (ignoring dt):
+            numberOfVertices = mesh.num_vertices;
+            iMinusLambdaL = (speye(numberOfVertices) - lambda .* L);
+            
+            % Get all vertices positions:
+            verticesPositions = mesh.getAllVertices().getTrait('position');
+            
+            % Solve the linear system: (I - lambda*dt*L) * X^(n+1) = X^(n)
+            V_smooth = iMinusLambdaL \ verticesPositions;
+            
         end
         
         function V_smooth = lsqSmoothing(mesh,L,wl,wp)
