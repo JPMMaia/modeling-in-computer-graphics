@@ -6,6 +6,28 @@ classdef MeshHelper < handle
             b = any(mesh.getAllHalfedges().face().index==0);
         end
         
+        function volume = computeSignedVolumeOfTriangle(face)
+            
+            % Each face has a halfedge associated with it:
+            halfedge = face.halfedge();
+            
+            % Get the position of each vertex of the face:
+            vertexPosition1 = halfedge.from().getTrait('position');
+            vertexPosition2 = halfedge.to().getTrait('position');
+            vertexPosition3 = halfedge.next().to().getTrait('position');
+            
+            % Calculate the volume of the triangle as described in
+            % [zhang2001efficient]
+            volume = ...
+            - vertexPosition3(:, 1) .* vertexPosition2(:, 2) .* vertexPosition1(:, 3) ...
+            + vertexPosition2(:, 1) .* vertexPosition3(:, 2) .* vertexPosition1(:, 3) ...
+            + vertexPosition3(:, 1) .* vertexPosition1(:, 2) .* vertexPosition2(:, 3) ...
+            - vertexPosition1(:, 1) .* vertexPosition3(:, 2) .* vertexPosition2(:, 3) ...
+            - vertexPosition2(:, 1) .* vertexPosition1(:, 2) .* vertexPosition3(:, 3) ...
+            + vertexPosition1(:, 1) .* vertexPosition2(:, 2) .* vertexPosition3(:, 3);
+            
+        end
+        
         function vol = computeVolume(mesh)
             % Returns the signed volume of the mesh.
 
@@ -18,7 +40,17 @@ classdef MeshHelper < handle
             % Do your own research on how to compute the volume
             % of a triangle mesh.
             
-            vol = 1;
+            % Get all triangled faces:
+            faces = mesh.getAllFaces();
+            
+            % Calculating the volume of a triangle mesh, as described in 
+            % [Zhang, Cha, and Tsuhan Chen. "Efficient feature extraction
+            % for 2D/3D objects in mesh representation." Image Processing,
+            % 2001. Proceedings. 2001 International Conference on. Vol. 3.
+            % IEEE, 2001]([zhang2001efficient])
+            volumes = MeshHelper.computeSignedVolumeOfTriangle(faces);
+            
+            vol = sum(volumes, 1);
         end
         
         function scaleMesh(mesh, factor)
