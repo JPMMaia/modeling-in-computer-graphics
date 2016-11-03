@@ -19,8 +19,6 @@ classdef MeshSmoothing < handle
             % Compute (I + lambda*L) * x:
             V_smooth = iPlusLamdaL * verticesPositions;
             
-            % TODO FIX SMOOTHING
-            
         end
         
         function V_smooth = implicitSmoothing(mesh, L, lambda)
@@ -54,24 +52,25 @@ classdef MeshSmoothing < handle
             % Implement least-squares mesh smoothing as described in
             % the slides and in [Nealen2006].
             
+            % Get vertex count:
             vertexCount = mesh.num_vertices;
-            m = 10;
             
             % Get all vertices positions:
             vertexPositions = mesh.getAllVertices().getTrait('position');
             
-            mVertices = vertexPositions(1:m, :);
-            Wp1 = eye(m, vertexCount) .* wp;
-            Wp2 = eye(m, vertexCount + m) .* wp;
-            Wl1 = eye(vertexCount, vertexCount) .* wl;
-            Wl2 = eye(vertexCount, vertexCount + m) .* wl;
+            % Create Wl matrix:
+            Wl = wl .* eye(vertexCount, vertexCount);
             
-            A = [ L ; Wp1 ];
-            b = [ zeros(vertexCount, 3) ; mVertices ];
+            % Create Wp matrix:
+            Wp = wp .* eye(vertexCount, vertexCount);
             
+            % Solve the system, with f = 0
+            % [ W_L * L ]        [  W_L * f  ]
+            % [ ------- ] V'_d = [ --------- ]
+            % [   W_p   ]        [ W_p * V_d ]
+            A = [ Wl * L ; Wp ];
+            b = [ zeros(vertexCount, 3) ; Wp * vertexPositions ];
             V_smooth = inv(A' * A) * A' * b;
-            
-            % TODO
             
         end
         
@@ -88,8 +87,7 @@ classdef MeshSmoothing < handle
             % [Nealen2006].
             
             
-
-            V_smooth = mesh.toFaceVertexMesh();
+            
         end
         
         function V_smooth = spectralSmoothing(mesh, L, k)
