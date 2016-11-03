@@ -86,7 +86,29 @@ classdef MeshSmoothing < handle
             % mesh smoothing as described in the slides and in
             % [Nealen2006].
             
+            % Get vertex count:
+            vertexCount = mesh.num_vertices;
             
+            % Get all vertices positions:
+            vertexPositions = mesh.getAllVertices().getTrait('position');
+            
+            % Create Wl matrix:
+            Wl = wl .* eye(vertexCount, vertexCount);
+            
+            % Create Wp matrix:
+            Wp = wp .* eye(vertexCount, vertexCount);
+            
+            % For detail preserving triangle shape optimization, f =
+            % delta_(d,c):
+            f = L_Cotangent * vertexPositions;
+            
+            % Solve the system, with f = delta_(d,c)
+            % [ W_L * L ]        [  W_L * f  ]
+            % [ ------- ] V'_d = [ --------- ]
+            % [   W_p   ]        [ W_p * V_d ]
+            A = [ Wl * L_uniform ; Wp ];
+            b = [ Wl * f ; Wp * vertexPositions ];
+            V_smooth = inv(A' * A) * A' * b;
             
         end
         
