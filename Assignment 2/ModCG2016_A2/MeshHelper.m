@@ -6,6 +6,12 @@ classdef MeshHelper < handle
             b = any(mesh.getAllHalfedges().face().index==0);
         end
         
+        function magnitude = computeMagnitude(vector)
+            
+            magnitude = sqrt(sum(vector.^2, 2));
+            
+        end
+        
         function volume = computeSignedVolumeOfTriangle(face)
             
             % Each face has a halfedge associated with it:
@@ -141,6 +147,166 @@ classdef MeshHelper < handle
 
         end
         
+        function nonBoundaryHalfedges = getAllNonBoundaryHalfedges(mesh)
+            
+            % Get all halfedges:
+            halfedges = mesh.getAllHalfedges();
+            
+            % For boundary halfedges, the faces returned have index 0:
+            incidentFaces = halfedges.face();
+            
+            % Find all faces' indices which have index != 0:
+            nonBoundaryFacesIndices = incidentFaces.index(:, 1) ~= 0;
+            
+            % Get all non-boundary halfedges indices using the indices of the faces:
+            boundaryHalfedgesIndices = halfedges.index(1, nonBoundaryFacesIndices');
+            
+            % Get all non-boundary halfedges using the previous calculated indices:
+            nonBoundaryHalfedges = mesh.getHalfedge(boundaryHalfedgesIndices);
+            
+        end
+        
+        function isObtuse = isTriangleObtuse(angleP, angleQ, angleR)
+            
+            isObtuse = angleP > 90 | angleQ > 90 | angleR > 90;
+            
+        end
+        
+        function voronoiArea = computeVoronoiArea(vertexPositionP, vertexPositionQ, vertexPositionR, cotagentOfAngleQ, cotagentOfAngleR)
+           
+            vectorPQ = vertexPositionQ - vertexPositionP;
+            vectorPR = vertexPositionR - vertexPositionP;
+            
+            vectorPQDistanceSquared = sum(vectorPQ .^ 2, 2);
+            vectorPRDistanceSquared = sum(vectorPR .^ 2, 2);
+            
+            voronoiArea = ( vectorPRDistanceSquared .* cotagentOfAngleQ + vectorPQDistanceSquared .* cotagentOfAngleR) ./ 8;
+            
+        end
+        
+        function triangleArea = computeAreaOfTriangle(vertexPositionP, vertexPositionQ, vertexPositionR)
+            
+            % Get the edges of the triangle:
+            vectorPQ = vertexPositionQ - vertexPositionP;
+            vectorPR = vertexPositionR - vertexPositionP;
+            vectorQR = vertexPositionR - vertexPositionQ;
+            
+            % Calculate the length of each length of the triangle:
+            vectorPQLength = sqrt(sum((vectorPQ).^2, 2));
+            vectorPRLength = sqrt(sum((vectorPR).^2, 2));
+            vectorQRLength = sqrt(sum((vectorQR).^2, 2));
+            
+            % Calculate the area of the triangle, using the Heron's
+            % Formula:
+            halfPerimeter = (vectorPQLength + vectorPRLength + vectorQRLength) ./ 2;
+            triangleArea = sqrt(halfPerimeter .* (halfPerimeter - vectorPQLength) .* (halfPerimeter - vectorPRLength) .* (halfPerimeter - vectorQRLength));
+            
+        end
+        
+        function aMixed = computeAMixed(halfedgeFromP)
+            
+            % Get remainder halfedges of the triangle:
+            halfedgeFromQ = halfedgeFromP.next();
+            halfedgeFromR = halfedgeFromQ.next();
+            
+            % Get vertex position of each vertex of the face:
+            vertexPositionP = halfedgeFromP.from().getTrait('position');
+            vertexPositionQ = halfedgeFromQ.from().getTrait('position');
+            vertexPositionR = halfedgeFromR.from().getTrait('position');
+            
+            % Mark halfedges which have an associated obtuse triangle:
+            isObtuse = MeshHelper.isTriangleObtuse(halfedgeFromP.getTrait('angle'), halfedgeFromQ.getTrait('angle'), halfedgeFromR.getTrait('angle'));
+            
+            % Compute voronoi area for non-obtuse triangles:
+            aMixed = ~isObtuse .* MeshHelper.computeVoronoiArea(vertexPositionP, vertexPositionQ, vertexPositionR, halfedgeFromQ.getTrait('cot_angle'), halfedgeFromR.getTrait('cot_angle'));
+            
+            % Calculate the triangle areas of each triangle.
+            % 'triangleAreas' will contain only the areas of the obtuse
+            % triangles.
+            triangleAreas = isObtuse .* MeshHelper.computeAreaOfTriangle(vertexPositionP, vertexPositionQ, vertexPositionR);
+            
+            % Mark halfedges which have an angle of triangle at vertex
+            % obtuse:
+            isAngleObtuseAtVertex = halfedgeFromP.getTrait('angle') > 90;
+            
+            % If the angle of triangle at vertex is obtuse, add area(T) /
+            % 2:
+            aMixed = aMixed + isAngleObtuseAtVertex .* (triangleAreas ./ 2);
+            
+            % Else, add area(T) / 4:
+            aMixed = aMixed + ~isAngleObtuseAtVertex .* (triangleAreas ./ 4);
+            
+            % If the triangle is obtuse:
+%             if (isTriangleObtuse(vertexPositionP, vertexPositionQ, vertexPositionR))
+%                
+%                 % If the angle of triangle at vertex is obtuse:
+%                 if (halfedgeFromP.getTrait('angle') > 90)
+%                     
+%                     % Add area(T)/2
+%                     % TODO
+%                     
+%                 else
+%                     
+%                     % Add area(T)/4
+%                     % TODO
+%                     
+%                 end
+%                 
+%             % If the triangle is non-obtuse:
+%             else 
+%                 
+%                 % Use the Voronoi formula:
+%                 aMixed = computeVoronoiArea(vertexPosition1, vertexPosition2, vertexPosition3, halfedgeFromQ.getTrait('cot_angle'), halfedgeFromR.getTrait('cot_angle'));
+%                 
+%             end
+            
+        end
+        
+        function sum = sumRowVectorsByIndex(indices, rowVectors)
+            
+            % Replicate the row and column indices:
+            numColumns = size(rowVectors, 2);
+            subscripts = [ 
+                repmat(indices(:), numColumns, 1) ...
+                kron(1:numColumns, ones(1, numel(indices))).'
+                ];
+            
+            % Sum all row vectors by index:
+            sum = accumarray(subscripts, rowVectors(:));
+            
+        end
+        
+        function meanCurvature = computeMeanCurvatureNormal(halfedges, aMixedPerVertex)
+            
+            % Get origin of each halfedge:
+            origins = halfedges.from().getTrait('position');
+            
+            % Get destination of each halfedge
+            destinations = halfedges.to().getTrait('position');
+            
+            % Get alpha and beta angles associated with each halfedge, as
+            % described in [Meyer2002, Section 3.1]:
+            cotangentOfAlpha = halfedges.prev().getTrait('cot_angle');
+            cotangentOfBeta = halfedges.twin().prev().getTrait('cot_angle');
+            
+            % Calculate the contribution of each halfedge to the mean
+            % curvature of its origin vertex:
+            meanCurvaturePerHalfedge = (cotangentOfAlpha + cotangentOfBeta) .* (origins - destinations);
+            
+            % Each halfedge has an origin vertex:
+            vertices = halfedges.from();
+            
+            % Sum the contributions of each halfedge towards the mean
+            % curvature of its origin vertex, as described in [Meyer2002,
+            % Section 3.5]:
+            scalar = 1 ./ ( 2 .* aMixedPerVertex);
+            meanCurvature = scalar .* MeshHelper.sumRowVectorsByIndex(vertices.index, meanCurvaturePerHalfedge);
+            
+        end
+        
+        function gaussCurvature = computeGaussCurvate()
+        end
+        
         function calculateDiscreteCurvatures(mesh)
             % Computes vertex traits 'mean_curv' for the discrete mean
             % curvature and 'gauss_curv' for the discrete Gaussian
@@ -159,8 +325,30 @@ classdef MeshHelper < handle
             % Note that a 'cot_angle' halfedge trait has already been
             % added (see calculateHalfedgeTrait()).
 
+            % Get all non-boundary halfedges:
+            halfedges = MeshHelper.getAllNonBoundaryHalfedges(mesh);
+            
+            % Compute the A_mixed of every adjacent face of the
+            % vertex associated with origin of the halfedge:
+            aMixed = MeshHelper.computeAMixed(halfedges);
+            halfedges.setTrait('a_mixed', aMixed);
+            
+            % Each halfedge has an origin vertex:
+            vertices = halfedges.from();
+            
+            % Sum the mix area for each vertex:
+            aMixedPerVertex = MeshHelper.sumRowVectorsByIndex(vertices.index, aMixed);
+            
+            % Calculate the mean curvature per vertex:
+            meanCurvatureNormal = MeshHelper.computeMeanCurvatureNormal(halfedges, aMixedPerVertex);
+            
+            % The mean curvature value K_H is half the magnitude of the
+            % mean curvature normal, as described in [Meyer2002, Section
+            % 3.5]:
+            meanCurvatureValue = 0.5 .* MeshHelper.computeMagnitude(meanCurvatureNormal);
+            mesh.getAllVertices().setTrait('mean_curv', meanCurvatureValue);
+            
             mesh.getAllVertices().setTrait('gauss_curv', 1);
-            mesh.getAllVertices().setTrait('mean_curv', 1);
             
         end
         

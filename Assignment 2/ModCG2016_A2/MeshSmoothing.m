@@ -145,7 +145,7 @@ classdef MeshSmoothing < handle
             % calculated eigenvectors:
             projectedVertexPositions = eigenvectors' * vertexPositions;
             
-            % Reconstruct a filtered version of the mesh:
+            % Reconstruct the filtered version of the mesh:
             V_smooth = eigenvectors * projectedVertexPositions;
             
         end
