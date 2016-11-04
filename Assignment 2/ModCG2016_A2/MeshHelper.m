@@ -304,7 +304,25 @@ classdef MeshHelper < handle
             
         end
         
-        function gaussCurvature = computeGaussCurvate()
+        function gaussianCurvature = computeGaussianCurvature(halfedges, aMixedPerVertex)
+            
+            % Get theta which is the angle of a neighbor face at the vertex
+            % which each halfedge origins, as described in [Meyer2002,
+            % Section 4.1]:
+            thetaAngles = halfedges.getTrait('angle');
+            
+            % Each halfedge has an origin vertex:
+            vertices = halfedges.from();
+            
+            % Sum all theta angles and store the result per vertex. This
+            % way, each row (corresponding to a vertex) will have the sum
+            % of all the theta angles associated with that vertex:
+            sumOfThetaAnglesPerVertex = MeshHelper.sumRowVectorsByIndex(vertices.index, thetaAngles);
+            
+            % Calculate Gaussian Curvature as described in [Meyer2002,
+            % Section 4.2]:
+            gaussianCurvature = (2 .* pi - sumOfThetaAnglesPerVertex) ./ aMixedPerVertex;
+            
         end
         
         function calculateDiscreteCurvatures(mesh)
@@ -345,10 +363,13 @@ classdef MeshHelper < handle
             % The mean curvature value K_H is half the magnitude of the
             % mean curvature normal, as described in [Meyer2002, Section
             % 3.5]:
-            meanCurvatureValue = 0.5 .* MeshHelper.computeMagnitude(meanCurvatureNormal);
-            mesh.getAllVertices().setTrait('mean_curv', meanCurvatureValue);
+            meanCurvatureValues = 0.5 .* MeshHelper.computeMagnitude(meanCurvatureNormal);
+            mesh.getAllVertices().setTrait('mean_curv', meanCurvatureValues);
             
-            mesh.getAllVertices().setTrait('gauss_curv', 1);
+            % Compute the gaussian curvature, as described in [Meyer2002,
+            % Section 4]:
+            gaussianCurvatureValues = MeshHelper.computeGaussianCurvature(halfedges, aMixedPerVertex);
+            mesh.getAllVertices().setTrait('gauss_curv', gaussianCurvatureValues);
             
         end
         
