@@ -126,7 +126,28 @@ classdef MeshSmoothing < handle
             % positions onto the basis spanned by these eigenvectors
             % and reconstruct a filtered version of the mesh.
 
-            V_smooth = mesh.toFaceVertexMesh();
+            % Spectral theorem:
+            % A = Q * D * inv(Q)
+            % where
+            % - D is as diagonal matrix and the entries of D are the
+            % eigenvalues of A;
+            % - Q is a unitary matrix in which the column vectors are the
+            % eigenvectors of A
+            
+            % Calculate the eigenvectors associated with the k smallest
+            % magnitude eigenvalues of the matrix L:
+            [eigenvectors, ~] = eigs(L, k, 'sm');
+            
+            % Get all vertices:
+            vertexPositions = mesh.getAllVertices().getTrait('position');
+            
+            % Project the vertex positions onto the basis spanned by the
+            % calculated eigenvectors:
+            projectedVertexPositions = eigenvectors' * vertexPositions;
+            
+            % Reconstruct a filtered version of the mesh:
+            V_smooth = eigenvectors * projectedVertexPositions;
+            
         end
     end
 end
