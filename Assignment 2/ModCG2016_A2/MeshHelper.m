@@ -236,30 +236,6 @@ classdef MeshHelper < handle
             % Else, add area(T) / 4:
             aMixed = aMixed + ~isAngleObtuseAtVertex .* (triangleAreas ./ 4);
             
-            % If the triangle is obtuse:
-%             if (isTriangleObtuse(vertexPositionP, vertexPositionQ, vertexPositionR))
-%                
-%                 % If the angle of triangle at vertex is obtuse:
-%                 if (halfedgeFromP.getTrait('angle') > 90)
-%                     
-%                     % Add area(T)/2
-%                     % TODO
-%                     
-%                 else
-%                     
-%                     % Add area(T)/4
-%                     % TODO
-%                     
-%                 end
-%                 
-%             % If the triangle is non-obtuse:
-%             else 
-%                 
-%                 % Use the Voronoi formula:
-%                 aMixed = computeVoronoiArea(vertexPosition1, vertexPosition2, vertexPosition3, halfedgeFromQ.getTrait('cot_angle'), halfedgeFromR.getTrait('cot_angle'));
-%                 
-%             end
-            
         end
         
         function sum = sumRowVectorsByIndex(indices, rowVectors)

@@ -46,7 +46,6 @@ classdef MeshLaplacian < handle
             % L(i, j) = -1, if i = j:
             diagonalRows = 1:numberOfVertices;
             diagonalColumns = 1:numberOfVertices;
-            diagonalValues = -ones(1, numberOfVertices);
             
             % L(i, j) = w[i,j], if i and j belong to the same edge:
             halfedges = mesh.getAllHalfedges(); 
@@ -55,6 +54,9 @@ classdef MeshLaplacian < handle
             
             if normalized
                
+                % Set diagonal values to -1:
+                diagonalValues = -ones(1, numberOfVertices);
+                
                 % Calculate a sparse matrix with the weights only:
                 LWeights = sparse(weightRows, weightColumns, weightValues, numberOfVertices, numberOfVertices);
                 
@@ -70,7 +72,14 @@ classdef MeshLaplacian < handle
                 
             else
                 
-                % Calculate the non-normalized version of the mesh Laplacian:
+                % Build an adjacency matrix, where A(i, j) = 1 if i and j
+                % belong to the same edge:
+                adjacencyMatrix = sparse(weightRows, weightColumns, ones(1, mesh.num_halfedges), numberOfVertices, numberOfVertices);
+                
+                % Each diagonal value is equals to degree of that vertex:
+                diagonalValues = -sum(adjacencyMatrix ~= 0, 1);
+                
+                % Calculate the non-normalized version of the mesh Laplacian, as described in [Sorkine2006]:
                 L = sparse([diagonalRows weightRows], [diagonalColumns weightColumns], [diagonalValues weightValues], numberOfVertices, numberOfVertices);
                 
             end

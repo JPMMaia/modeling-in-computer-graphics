@@ -16,7 +16,7 @@ classdef MeshSmoothing < handle
             % Get all vertices positions:
             verticesPositions = mesh.getAllVertices().getTrait('position');
             
-            % Compute (I + lambda*L) * x:
+            % Compute X^(n+1) = (I + lambda*L) * X^(n):
             V_smooth = iPlusLamdaL * verticesPositions;
             
         end
@@ -137,6 +137,11 @@ classdef MeshSmoothing < handle
             % Calculate the eigenvectors associated with the k smallest
             % magnitude eigenvalues of the matrix L:
             [eigenvectors, ~] = eigs(L, k, 'sm');
+            
+            % In some cases, the eigenvectors become imaginary numbers with
+            % the imaginary component equals to 0. So lets take the real
+            % component:
+            % eigenvectors = real(eigenvectors);
             
             % Get all vertices:
             vertexPositions = mesh.getAllVertices().getTrait('position');
