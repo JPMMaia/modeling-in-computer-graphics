@@ -138,10 +138,12 @@ classdef MeshSmoothing < handle
             % magnitude eigenvalues of the matrix L:
             [eigenvectors, ~] = eigs(L, k, 'sm');
             
-            % In some cases, the eigenvectors become imaginary numbers with
-            % the imaginary component equals to 0. So lets take the real
-            % component:
-            % eigenvectors = real(eigenvectors);
+            % In some cases, the eigenvectors become imaginary numbers. In
+            % this case, return the original mesh: 
+            if(~isreal(eigenvectors))
+                V_smooth = mesh.getAllVertices().getTrait('position');
+                return;
+            end
             
             % Get all vertices:
             vertexPositions = mesh.getAllVertices().getTrait('position');
