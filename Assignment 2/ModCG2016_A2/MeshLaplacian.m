@@ -15,25 +15,10 @@ classdef MeshLaplacian < handle
             
         end
         
-        function [alpha, beta] = computeAngles(halfedge)
+        function [cotangentOfAngleAlpha, cotangentOfAngleBeta] = computeCotangentAngles(halfedge)
            
-            % Get all needed vertices (vi, vj, vj-1, vj+1):
-            vi = halfedge.from().getTrait('position');
-            vj = halfedge.to().getTrait('position');
-            vjMinus1 = halfedge.prev().from().getTrait('position');
-            vjPlus1 = halfedge.twin().next().to().getTrait('position');
-            
-            % Calculate alpha which is the angle between the vectors [vj-1
-            % to vi] and [vj-1 to vj]:
-            vjMinus1ToVi = vi - vjMinus1;
-            vjMinus1ToVj = vj - vjMinus1;
-            alpha = MeshLaplacian.computeAngleBetweenVectors(vjMinus1ToVi, vjMinus1ToVj);
-            
-            % Calculate beta which is the angle between the vectors [vj+1
-            % to vi] and [vj+1 to vj]:
-            vjPlus1ToVi = vi - vjPlus1;
-            vjPlus1ToVj = vj - vjPlus1;
-            beta = MeshLaplacian.computeAngleBetweenVectors(vjPlus1ToVi, vjPlus1ToVj);
+            cotangentOfAngleAlpha = halfedge.prev().getTrait('cot_angle');
+            cotangentOfAngleBeta = halfedge.twin().prev().getTrait('cot_angle');
             
         end
         
@@ -139,8 +124,8 @@ classdef MeshLaplacian < handle
 
             % For cotangent laplacian, w[i, j] = cot(alpha) + cot(beta):
             halfedges = mesh.getAllHalfedges();
-            [alphas, betas] = MeshLaplacian.computeAngles(halfedges);
-            weightValues = (cot(alphas) + cot(betas))';
+            [cotangentOfAnglesAlpha, cotangentOfAnglesBeta] = MeshLaplacian.computeCotangentAngles(halfedges);
+            weightValues = (cotangentOfAnglesAlpha + cotangentOfAnglesBeta)';
             
             L = MeshLaplacian.computeLaplacian(mesh, normalized, weightValues);
             
