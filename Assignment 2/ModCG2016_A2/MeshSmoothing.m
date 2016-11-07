@@ -138,8 +138,9 @@ classdef MeshSmoothing < handle
             % magnitude eigenvalues of the matrix L:
             [eigenvectors, ~] = eigs(L, k, 'sm');
             
-            % In some cases, the eigenvectors become imaginary numbers. In
-            % this case, return the original mesh: 
+            % In some cases (i. e. it can happen if the the laplacian
+            % matrix is not symmetric), the eigenvectors become imaginary
+            % numbers. In this case, return the original mesh:
             if(~isreal(eigenvectors))
                 V_smooth = mesh.getAllVertices().getTrait('position');
                 return;

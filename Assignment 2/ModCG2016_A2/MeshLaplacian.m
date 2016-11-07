@@ -57,6 +57,12 @@ classdef MeshLaplacian < handle
                 
             else
                 
+                % Implementing the non-normalized (symmetric) version of
+                % the Laplacian matrix as described in [Sorkine 2006,
+                % Section 2.1]. The sign convention is chosen such that
+                % diagonal entries are negative and off-diagonal entries
+                % are positive.
+                
                 % Build an adjacency matrix, where A(i, j) = 1 if i and j
                 % belong to the same edge:
                 adjacencyMatrix = sparse(weightRows, weightColumns, ones(1, mesh.num_halfedges), numberOfVertices, numberOfVertices);

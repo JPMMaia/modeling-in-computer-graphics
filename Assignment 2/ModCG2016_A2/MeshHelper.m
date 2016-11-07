@@ -31,6 +31,7 @@ classdef MeshHelper < handle
             - vertexPosition1(:, 1) .* vertexPosition3(:, 2) .* vertexPosition2(:, 3) ...
             - vertexPosition2(:, 1) .* vertexPosition1(:, 2) .* vertexPosition3(:, 3) ...
             + vertexPosition1(:, 1) .* vertexPosition2(:, 2) .* vertexPosition3(:, 3);
+            volume = volume ./ 6;
             
         end
         
