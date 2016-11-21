@@ -169,7 +169,7 @@ classdef MeshHelper < handle
         
         function isObtuse = isTriangleObtuse(angleP, angleQ, angleR)
             
-            isObtuse = angleP > 90 | angleQ > 90 | angleR > 90;
+            isObtuse = angleP > (pi / 2) | angleQ > (pi / 2) | angleR > (pi / 2);
             
         end
         
@@ -228,7 +228,7 @@ classdef MeshHelper < handle
             
             % Mark halfedges which have an angle of triangle at vertex
             % obtuse:
-            isAngleObtuseAtVertex = halfedgeFromP.getTrait('angle') > 90;
+            isAngleObtuseAtVertex = halfedgeFromP.getTrait('angle') > (pi / 2);
             
             % If the angle of triangle at vertex is obtuse, add area(T) /
             % 2:
