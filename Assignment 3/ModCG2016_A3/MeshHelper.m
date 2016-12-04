@@ -15,7 +15,45 @@ classdef MeshHelper < handle
             % without iterating over the elements of the boundary loop?
             % I could not :(
 
-            l = [];
+            % Get all halfedges:
+            halfedges = mesh.getAllHalfedges();
+            
+            % Each halfedges references a face:
+            faces = halfedges.face();
+            facesIndices = faces.index;
+            
+            % Find all halfedge indices which belong to the boundary:
+            boundaryHalfedgesIndices = find(facesIndices == 0);
+            
+            % If the mesh has no boundary, then return empty list:
+            if(size(boundaryHalfedgesIndices, 1) == 0)
+               l = [];
+               return;
+            end
+            
+            % Allocate memory for the boundary loop array:
+            l = zeros(size(boundaryHalfedgesIndices, 1), 1);
+            
+            % Get the first boundary halfedge of the list and add it to the
+            % boundary loop:
+            firstHalfedge = mesh.getHalfedge(boundaryHalfedgesIndices(1));
+            l(1, 1) = firstHalfedge.index;
+            
+            % Iterate through the boundary loop and add each one to the
+            % boundary loop list:
+            index = 2;
+            currentHalfedge = firstHalfedge.next();
+            while(currentHalfedge.index ~= firstHalfedge.index)
+               
+                % Add halfedge index to the boundary loop:
+                l(index, 1) = currentHalfedge.index;
+                index = index + 1;
+                
+                % Go for the next halfedge of the bounrary:
+                currentHalfedge = currentHalfedge.next();
+                
+            end
+            
         end
         
         function b = hasBoundary(mesh)

@@ -53,7 +53,29 @@ classdef MeshParameterization < handle
             else
                 % TODO_A3 Task 1b
                 % Distribute boundary points uniformly along a circle.
-                uvpos = zeros(length(bdr_hei), 2);
+                
+                % Define the radius and center of the sphere:
+                radius = 0.5;
+                center = [ 0.5, 0.5 ];
+                
+                % Get the number of halfedges:
+                halfedgeCount = length(bdry_hei);
+                
+                % Calculate the angle between each vertex (in polar coordinates):
+                deltaAngle = (2.0 * pi) / halfedgeCount;
+                
+                % Create a row vector with values [0, halfedgeCount - 1],
+                % incremented one by one:
+                angleFactor = linspace(0, halfedgeCount - 1, halfedgeCount);
+                
+                % Calculate the angle associated with each vertex:
+                angles = angleFactor .* deltaAngle;
+                
+                % The position of each vertex is calculated using polar
+                % coordinates:
+                % [centerX + radius * cos(angle), centerY + radius * sin(angle)]
+                uvpos = center + radius .* [ cos(angles)' , sin(angles)' ];
+                
             end
         end
         
