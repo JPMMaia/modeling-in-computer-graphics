@@ -70,7 +70,7 @@ classdef MeshParameterization < handle
                 
                 % Calculate the angle associated with each vertex:
                 angles = angleFactor .* deltaAngle;
-                
+               
                 % The position of each vertex is calculated using polar
                 % coordinates:
                 % [centerX + radius * cos(angle), centerY + radius * sin(angle)]
@@ -91,46 +91,67 @@ classdef MeshParameterization < handle
             % uvpos: a p-by-2 array, where the i-th row contains the
             % position of the i-th boundary vertex on the square.
 
+            % TODO_A3 Task 1d
+            % Distribute boundary points adaptively along a square.
+            
+            % TODO_A3 Task 1b
+            % Distribute boundary points uniformly along a square.
+            
+            % Define the limits of the square boundary:
+            squareBoundaryLimits = [ 0.0, 0.0 ; 1.0, 0.0 ; 1.0, 1.0 ; 0.0, 1.0 ; 0.0, 0.0 ];
+
+            % Get the number of halfedges:
+            halfedgeCount = length(bdry_hei);
+
             if adaptive_spacing
-                % TODO_A3 Task 1d
-                % Distribute boundary points adaptively along a square.
-                uvpos = zeros(length(bdr_hei), 2);
+                
+                % Get the boundary halfedges:
+                halfedges = mesh.getHalfedge(bdry_hei);
+                
+                % Calculate the length of each edge:
+                edgeLength = sqrt(sum((halfedges.to().getTrait('position') - halfedges.from().getTrait('position')).^2, 2));
+                
+                % Calculate the length of the boundary:
+                totalEdgeLength = sum(edgeLength, 1);
+                
+                % Calculate a weight for each point between 0 and 1:
+                edgeWeight = edgeLength ./ totalEdgeLength;
+                
+                % Map from [0, 1] to [0, 4]:
+                boundaryWeights = 4.0 .* edgeWeight;
+                
             else
-                % TODO_A3 Task 1b
-                % Distribute boundary points uniformly along a square.
                 
-                % Define the limits of the square boundary:
-                squareBoundaryLimits = [ 0.0, 0.0 ; 1.0, 0.0 ; 1.0, 1.0 ; 0.0, 1.0 ; 0.0, 0.0 ];
-                
-                % Get the number of halfedges:
-                halfedgeCount = length(bdry_hei);
-                
-                % Create a row vector with values in range [1, 5]. This
-                % represents the position of the vertex in a stretched
-                % boundary of length 4 (the perimeter of the square):
-                boundaryFactor = linspace(0, halfedgeCount - 1, halfedgeCount)';
-                boundaryPosition = 1.0 + boundaryFactor .* (4 / halfedgeCount);
-                
-                % Calculate the floor and ceil of the boundary position.
-                % For instance, if boundaryPosition = 1.4, the floor will
-                % be 1 and the ceil will be 2:
-                floorLimit = floor(boundaryPosition);
-                ceilLimit = ceil(boundaryPosition);
-                
-                % Calculate the position along an edge. For instance, if
-                % boundaryPosition = 1.4, the positionAlongEdge = 0.4.
-                positionAlongEdge = boundaryPosition - floorLimit;
-                
-                % Get the vertices belonging to each edge:
-                vertexEdge0 = squareBoundaryLimits(int64(floorLimit), :);
-                vertexEdge1 = squareBoundaryLimits(int64(ceilLimit), :);
-                
-                % The position is calculated by interpolation between the
-                % two vertices of the edge using the positionAlongEdge
-                % (which has a value between 0 and 1):
-                uvpos = (1.0 - positionAlongEdge) .* vertexEdge0 + positionAlongEdge .* vertexEdge1;
+                % Give an equal weight for each point in the range[0, 4]:
+                boundaryWeights = ones(halfedgeCount, 1) .* (4 / halfedgeCount);
                 
             end
+            
+            
+            % Create a row vector with values in range [1, 5]. This
+            % represents the position of the vertex in a stretched
+            % boundary of length 4 (the perimeter of the square):
+            boundaryPosition = 1.0 + cumsum(boundaryWeights);
+
+            % Calculate the floor and ceil of the boundary position.
+            % For instance, if boundaryPosition = 1.4, the floor will
+            % be 1 and the ceil will be 2:
+            floorLimit = floor(boundaryPosition);
+            ceilLimit = ceil(boundaryPosition);
+
+            % Calculate the position along an edge. For instance, if
+            % boundaryPosition = 1.4, the positionAlongEdge = 0.4.
+            positionAlongEdge = boundaryPosition - floorLimit;
+
+            % Get the vertices belonging to each edge:
+            vertexEdge0 = squareBoundaryLimits(int64(floorLimit), :);
+            vertexEdge1 = squareBoundaryLimits(int64(ceilLimit), :);
+
+            % The position is calculated by interpolation between the
+            % two vertices of the edge using the positionAlongEdge
+            % (which has a value between 0 and 1):
+            uvpos = (1.0 - positionAlongEdge) .* vertexEdge0 + positionAlongEdge .* vertexEdge1;
+            
         end
         
         function uv = lscmParameterization(mesh, bdry_vi, bdry_uvpos)
