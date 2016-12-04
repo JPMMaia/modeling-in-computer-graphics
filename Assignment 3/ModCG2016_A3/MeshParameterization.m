@@ -98,7 +98,38 @@ classdef MeshParameterization < handle
             else
                 % TODO_A3 Task 1b
                 % Distribute boundary points uniformly along a square.
-                uvpos = zeros(length(bdr_hei), 2);
+                
+                % Define the limits of the square boundary:
+                squareBoundaryLimits = [ 0.0, 0.0 ; 1.0, 0.0 ; 1.0, 1.0 ; 0.0, 1.0 ; 0.0, 0.0 ];
+                
+                % Get the number of halfedges:
+                halfedgeCount = length(bdry_hei);
+                
+                % Create a row vector with values in range [1, 5]. This
+                % represents the position of the vertex in a stretched
+                % boundary of length 4 (the perimeter of the square):
+                boundaryFactor = linspace(0, halfedgeCount - 1, halfedgeCount)';
+                boundaryPosition = 1.0 + boundaryFactor .* (4 / halfedgeCount);
+                
+                % Calculate the floor and ceil of the boundary position.
+                % For instance, if boundaryPosition = 1.4, the floor will
+                % be 1 and the ceil will be 2:
+                floorLimit = floor(boundaryPosition);
+                ceilLimit = ceil(boundaryPosition);
+                
+                % Calculate the position along an edge. For instance, if
+                % boundaryPosition = 1.4, the positionAlongEdge = 0.4.
+                positionAlongEdge = boundaryPosition - floorLimit;
+                
+                % Get the vertices belonging to each edge:
+                vertexEdge0 = squareBoundaryLimits(int64(floorLimit), :);
+                vertexEdge1 = squareBoundaryLimits(int64(ceilLimit), :);
+                
+                % The position is calculated by interpolation between the
+                % two vertices of the edge using the positionAlongEdge
+                % (which has a value between 0 and 1):
+                uvpos = (1.0 - positionAlongEdge) .* vertexEdge0 + positionAlongEdge .* vertexEdge1;
+                
             end
         end
         
