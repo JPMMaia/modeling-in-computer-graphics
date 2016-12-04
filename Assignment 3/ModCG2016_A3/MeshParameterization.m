@@ -31,7 +31,38 @@ classdef MeshParameterization < handle
             % identity rows, and put the known uv values into the
             % right-hand side vector.
 
-            uv = zeros(mesh.num_vertices, 2);
+            % Get all boundary halfedges:
+            boundaryHalfedges = mesh.getHalfedge(bdry_hei);
+            
+            % Get all the boundary vertices indices. These indices
+            % correspond to the rows associated with known uv values.
+            knownUVIndices = boundaryHalfedges.from().index;
+            
+            % Find all non zero values of the laplacian matrix:
+            [nonZeroLaplacianRows, nonZeroLaplacianColumns, nonZeroLaplacianValues] = find(laplacian);
+            
+            % Remove all the rows associated with the known UV values:
+            [indicesToKeep, ~, ~] = find(~ismember(nonZeroLaplacianRows, knownUVIndices));
+            nonZeroLaplacianRows = nonZeroLaplacianRows(indicesToKeep);
+            nonZeroLaplacianColumns = nonZeroLaplacianColumns(indicesToKeep);
+            nonZeroLaplacianValues = nonZeroLaplacianValues(indicesToKeep);
+            
+            % Substitute the rows associated with known uv values by
+            % identity rows:
+            nonZeroLaplacianRows = [ nonZeroLaplacianRows ; knownUVIndices ];
+            nonZeroLaplacianColumns = [ nonZeroLaplacianColumns ; knownUVIndices ];
+            nonZeroLaplacianValues = [ nonZeroLaplacianValues ; ones(size(knownUVIndices, 1), 1) ];
+            
+            % Create a new laplacian where the rows associated with known
+            % uv values are identity rows:
+            laplacian = sparse(nonZeroLaplacianRows, nonZeroLaplacianColumns, nonZeroLaplacianValues, size(laplacian, 1), size(laplacian, 2));
+            
+            % Put the known uv values into the right-hand side vector b:
+            b = zeros(mesh.num_vertices, 2);
+            b(knownUVIndices, :) = uv_fixed;
+            
+            % Solve the linear system laplacian . uv = b:
+            uv = laplacian \ b;
         end
         
         function uvpos = generateCircleBoundary(mesh, bdry_hei, adaptive_spacing)
