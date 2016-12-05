@@ -77,37 +77,52 @@ classdef MeshParameterization < handle
             % uvpos: a p-by-2 array, where the i-th row contains the
             % position of the i-th boundary vertex on the circle.
 
+            % TODO_A3 Task 1d
+            % Distribute boundary points adaptively along a circle.
+            
+            % TODO_A3 Task 1b
+            % Distribute boundary points uniformly along a circle.
+            
+            % Define the radius and center of the sphere:
+            radius = 0.5;
+            center = [ 0.5, 0.5 ];
+
+            % Get the number of halfedges:
+            halfedgeCount = length(bdry_hei);
+
             if adaptive_spacing
-                % TODO_A3 Task 1d
-                % Distribute boundary points adaptively along a circle.
-                uvpos = zeros(length(bdr_hei), 2);
+                
+                % Get the boundary halfedges:
+                halfedges = mesh.getHalfedge(bdry_hei);
+                
+                % Calculate the length of each edge:
+                edgeLength = sqrt(sum((halfedges.to().getTrait('position') - halfedges.from().getTrait('position')).^2, 2));
+                
+                % Calculate the length of the boundary:
+                totalEdgeLength = sum(edgeLength, 1);
+                
+                % Calculate a weight for each point between 0 and 1:
+                edgeWeight = edgeLength ./ totalEdgeLength;
+                
+                % Map weights from [0, 1] to [0, 2.0 * pi]:
+                deltaAngle = edgeWeight .* 2.0 .* pi;
+                
             else
-                % TODO_A3 Task 1b
-                % Distribute boundary points uniformly along a circle.
                 
-                % Define the radius and center of the sphere:
-                radius = 0.5;
-                center = [ 0.5, 0.5 ];
-                
-                % Get the number of halfedges:
-                halfedgeCount = length(bdry_hei);
-                
-                % Calculate the angle between each vertex (in polar coordinates):
-                deltaAngle = (2.0 * pi) / halfedgeCount;
-                
-                % Create a row vector with values [0, halfedgeCount - 1],
-                % incremented one by one:
-                angleFactor = linspace(0, halfedgeCount - 1, halfedgeCount);
-                
-                % Calculate the angle associated with each vertex:
-                angles = angleFactor .* deltaAngle;
-               
-                % The position of each vertex is calculated using polar
-                % coordinates:
-                % [centerX + radius * cos(angle), centerY + radius * sin(angle)]
-                uvpos = center + radius .* [ cos(angles)' , sin(angles)' ];
+                % Give an equal angle to all points in the range[0,
+                % 2.0*pi]:
+                deltaAngle = repmat(2.0 * pi / halfedgeCount, halfedgeCount, 1);
                 
             end
+            
+            % Calculate the angle associated with each vertex:
+            angles = cumsum(deltaAngle);
+
+            % The position of each vertex is calculated using polar
+            % coordinates:
+            % [centerX + radius * cos(angle), centerY + radius * sin(angle)]
+            uvpos = repmat(center, halfedgeCount, 1)  + radius .* [ cos(angles) , sin(angles) ];
+            
         end
         
         function uvpos = generateSquareBoundary(mesh, bdry_hei, adaptive_spacing)
