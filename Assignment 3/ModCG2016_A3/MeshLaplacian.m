@@ -56,12 +56,35 @@ classdef MeshLaplacian < handle
             % TODO_A3 Task 1e
             % Implement the Laplacian with mean value weights.
 
-            nv = mesh.num_vertices;
+            % Get the number of vertices:
+            vertexCount = mesh.num_vertices;
+            
+            % Get all halfedges:
+            halfedges = mesh.getAllHalfedges();
+            
+            % Get the alpha_ij and beta_ji angles (the angles of boundary
+            % faces are set to 0):
+            alphaij = halfedges.twin().next().getTrait('angle') .* (halfedges.twin().face().index > 0);
+            betaji = halfedges.getTrait('angle') .* (halfedges.face().index > 0);
+            
+            % Create a laplacian matrix with the non-diagonal values:
+            laplacianValues = sparse(halfedges.from().index, halfedges.to().index, alphaij + betaji);
+            
             if normalized
-                L = sparse(nv, nv);
+               
+                % Normalize laplacian matrix by diving each row by the sum
+                % of all elements in that row. Then add -1 to the diagonal
+                % of the matrix:
+                L = bsxfun(@rdivide, laplacianValues, full(sum(laplacianValues, 2))) - speye(vertexCount);
+                
             else
-                L = sparse(nv, nv);
+                
+                % Set the diagonal values to the sum of each row (so that
+                % the sum of each row is equal to 0):
+                L = laplacianValues - sparse((1:vertexCount)', (1:vertexCount)', full(sum(laplacianValues, 2)));
+                
             end
+            
         end
     end
 end
