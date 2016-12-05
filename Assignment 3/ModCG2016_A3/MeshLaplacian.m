@@ -56,12 +56,46 @@ classdef MeshLaplacian < handle
             % TODO_A3 Task 1e
             % Implement the Laplacian with mean value weights.
 
-            nv = mesh.num_vertices;
+            % Get the number of vertices:
+            vertexCount = mesh.num_vertices;
+            
+            % Get all halfedges:
+            halfedges = mesh.getAllHalfedges();
+            
+            % Get the alpha_ij and beta_ji angles (the angles of boundary
+            % faces are set to 0):
+            alphaiMinus1 = halfedges.twin().next().getTrait('angle') .* (halfedges.twin().face().index > 0);
+            alphai = halfedges.getTrait('angle') .* (halfedges.face().index > 0);
+            
+            % Calculate the vector from vi to v0:
+            viv0 = halfedges.to().getTrait('position') - halfedges.from().getTrait('position');
+            
+            % Compute the length of the vector from vi to v0:
+            lengthOfViv0 = sqrt(sum(viv0.^2, 2));
+            
+            % Compute the weight values according to Floater, Michael S.
+            % "Mean value coordinates." Computer aided geometric design 20,
+            % no. 1 (2003): 19-27.:
+            weightValues = (tan(alphaiMinus1 ./ 2.0) + tan(alphai / 2.0)) ./ lengthOfViv0;
+            
+            % Create a laplacian matrix with the weight values:
+            weightValuesMatrix = sparse(halfedges.from().index, halfedges.to().index, weightValues);
+            
             if normalized
-                L = sparse(nv, nv);
+               
+                % Normalize laplacian matrix by diving each row by the sum
+                % of all elements in that row. Then add -1 to the diagonal
+                % of the matrix:
+                L = bsxfun(@rdivide, weightValuesMatrix, full(sum(weightValuesMatrix, 2))) - speye(vertexCount);
+                
             else
-                L = sparse(nv, nv);
+                
+                % Set the diagonal values to the sum of each row (so that
+                % the sum of each row is equal to 0):
+                L = weightValuesMatrix - sparse((1:vertexCount)', (1:vertexCount)', full(sum(weightValuesMatrix, 2)));
+                
             end
+            
         end
     end
 end

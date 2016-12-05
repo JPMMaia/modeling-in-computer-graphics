@@ -63,6 +63,7 @@ classdef MeshParameterization < handle
             
             % Solve the linear system laplacian . uv = b:
             uv = laplacian \ b;
+            
         end
         
         function uvpos = generateCircleBoundary(mesh, bdry_hei, adaptive_spacing)
@@ -172,7 +173,6 @@ classdef MeshParameterization < handle
                 boundaryWeights = ones(halfedgeCount, 1) .* (4 / halfedgeCount);
                 
             end
-            
             
             % Create a row vector with values in range [1, 5]. This
             % represents the position of the vertex in a stretched
