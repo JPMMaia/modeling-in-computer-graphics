@@ -200,6 +200,123 @@ classdef MeshParameterization < handle
             
         end
         
+        function normalizedVector = normalize(vector)
+            
+            normalizedVector = sqrt(sum(vector .^ 2, 2));
+            
+        end
+        
+        function [orthonormalBasisX, orthonormalBasisY]  = computeOrthonormalBasis(halfedge)
+            
+            % receive only halfedges with index != 0
+            
+            % Get each point of the triangle:
+            xi = halfedge.from().getTrait('position');
+            xj = halfedge.to().getTrait('position');
+            xk = halfedge.next().to().getTrait('position');
+            
+            % Create the orthonormal basis vector X:
+            orthonormalBasisX = (xj - xi);
+            orthonormalBasisX = MeshParameterization.normalize(orthonormalBasisX);
+            
+            % Compute the normal to the basis:
+            basisNormal = cross(orthonormalBasisX, (xk - xi), 2);
+            basisNormal = MeshParameterization.normalize(basisNormal);
+            
+            % Create the orthonormal basis vector Y:
+            orthonormalBasisY = cross(basisNormal, orthonormalBasisX, 2);
+            
+        end
+        
+        function matrixOut = addZerosAfterEachRow(matrixIn)
+            
+            matrixOut = reshape( ...
+                [ ... 
+                    reshape(matrixIn, 1, []); ...
+                    zeros(1, n(1) / n(2))
+                ], ...
+                [], ...
+                n(2) ...
+            );
+            
+        end
+        
+        function matrixOut = addZerosBeforeEachRow(matrixIn)
+            
+            matrixOut = reshape( ...
+                [ ... 
+                    zeros(1, n(1) / n(2)) ; ...
+                    reshape(matrixIn, 1, []) ...
+                ], ...
+                [], ...
+                n(2) ...
+            );
+            
+        end
+        
+        function M = computeM(halfedge)
+            
+            % Compute the orthonormal basis for the given halfedge:
+            [basisX, basisY] = MeshParameterization.computeOrthonormalBasis(halfedge);
+            
+            % Get the area of the triangle associated with the halfedge:
+            triangleArea = halfedge.face().getTrait('area');
+            
+            % Compute the scalar which is applied to each element of the
+            % matrix:
+            mScalar = 1.0 ./ (2.0 .* triangleArea);
+            
+            % Repeat each element into a 2-by-1 block of a new matrix:
+            mScalar = repelem(mScalar, 2, 1);
+            
+            % Compute the first row:
+            yjMinusYk = MeshParameterization.addZerosAfterEachRow(basisY(:, 2) - basisY(:, 3));
+            ykMinusYi = MeshParameterization.addZerosAfterEachRow(basisY(:, 3) - basisY(:, 1));
+            yiMinusYj = MeshParameterization.addZerosAfterEachRow(basisY(:, 1) - basisY(:, 2));
+            
+            % Compute the second row:
+            xkMinusXj = MeshParameterization.addZerosBeforeEachRow(basisX(:, 3) - basisX(:, 2));
+            xiMinusXk = MeshParameterization.addZerosBeforeEachRow(basisX(:, 1) - basisX(:, 3));
+            xjMinusXi = MeshParameterization.addZerosBeforeEachRow(basisX(:, 2) - basisX(:, 1));
+            
+            M = [ yjMinusYk, ykMinusYi, yiMinusYj ];
+            M = M + [ xkMinusXj, xiMinusXk, xjMinusXi ];
+            M = mScalar .* M;
+            
+        end
+        
+        function M = computeElscm(face)
+            
+            % receive only faces
+            
+            % Get all the halfedges of the face:
+            halfedgei = face.halfedge();
+            halfedgej = halfedgei.next();
+            halfedgek = halfedgek.next();
+            
+            Ma = MeshParameterization.computeM(halfedgei);
+            Mb = MeshParameterization.computeM(halfedgej);
+            Mc = MeshParameterization.computeM(halfedgek);
+            
+            
+            
+            % Get the triangle area:
+            triangleArea = halfedge.face().getTrait('area');
+            
+            mtScalar = 1.0 ./ (2.0 .* triangleArea);
+            
+            MT = ...
+            [ mtScalar ; mtScalar ] .* ...
+            [ ...
+                orthonormalBasisY(:, 2) - orthonormalBasisY(:, 3), orthonormalBasisY(:, 3) - orthonormalBasisY(:, 1), orthonormalBasisY(:, 1) - orthonormalBasisY(:, 2) ;
+                orthonormalBasisX(:, 3) - orthonormalBasisX(:, 2), orthonormalBasisX(:, 1) - orthonormalBasisX(:, 3), orthonormalBasisX(:, 2) - orthonormalBasisX(:, 1) ...
+            ];
+                
+            
+            
+            
+        end
+        
         function uv = lscmParameterization(mesh, bdry_vi, bdry_uvpos)
             % Computes a mesh parameterization according to the
             % least-squares conformal map (LSCM) algorithm.
@@ -229,6 +346,10 @@ classdef MeshParameterization < handle
             % implement next.
 
             M = sparse(2*mesh.num_faces, 2*mesh.num_vertices);
+            
+            
+            
+            
             uv = MeshParameterization.setBCAndSolve(M, bdry_vi, bdry_uvpos);
         end
         
