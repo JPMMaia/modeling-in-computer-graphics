@@ -202,13 +202,11 @@ classdef MeshParameterization < handle
         
         function normalizedVector = normalize(vector)
             
-            normalizedVector = sqrt(sum(vector .^ 2, 2));
+            normalizedVector = vector ./ sqrt(sum(vector .^ 2, 2));
             
         end
         
         function [orthonormalBasisX, orthonormalBasisY]  = computeOrthonormalBasis(halfedge)
-            
-            % receive only halfedges with index != 0
             
             % Get each point of the triangle:
             xi = halfedge.from().getTrait('position');
@@ -228,35 +226,12 @@ classdef MeshParameterization < handle
             
         end
         
-        function matrixOut = addZerosAfterEachRow(matrixIn)
+        function M = computeM(mesh)
             
-            matrixOut = reshape( ...
-                [ ... 
-                    reshape(matrixIn, 1, []); ...
-                    zeros(1, n(1) / n(2))
-                ], ...
-                [], ...
-                n(2) ...
-            );
+            % Get the halfedge associated with each face:
+            halfedge = mesh.getAllFaces().halfedge();
             
-        end
-        
-        function matrixOut = addZerosBeforeEachRow(matrixIn)
-            
-            matrixOut = reshape( ...
-                [ ... 
-                    zeros(1, n(1) / n(2)) ; ...
-                    reshape(matrixIn, 1, []) ...
-                ], ...
-                [], ...
-                n(2) ...
-            );
-            
-        end
-        
-        function M = computeM(halfedge)
-            
-            % Compute the orthonormal basis for the given halfedge:
+            % Compute the orthonormal basis for the given triangle:
             [basisX, basisY] = MeshParameterization.computeOrthonormalBasis(halfedge);
             
             % Get the area of the triangle associated with the halfedge:
@@ -270,50 +245,30 @@ classdef MeshParameterization < handle
             mScalar = repelem(mScalar, 2, 1);
             
             % Compute the first row:
-            yjMinusYk = MeshParameterization.addZerosAfterEachRow(basisY(:, 2) - basisY(:, 3));
-            ykMinusYi = MeshParameterization.addZerosAfterEachRow(basisY(:, 3) - basisY(:, 1));
-            yiMinusYj = MeshParameterization.addZerosAfterEachRow(basisY(:, 1) - basisY(:, 2));
+            yjMinusYk = basisY(:, 2) - basisY(:, 3);
+            ykMinusYi = basisY(:, 3) - basisY(:, 1);
+            yiMinusYj = basisY(:, 1) - basisY(:, 2);
             
             % Compute the second row:
-            xkMinusXj = MeshParameterization.addZerosBeforeEachRow(basisX(:, 3) - basisX(:, 2));
-            xiMinusXk = MeshParameterization.addZerosBeforeEachRow(basisX(:, 1) - basisX(:, 3));
-            xjMinusXi = MeshParameterization.addZerosBeforeEachRow(basisX(:, 2) - basisX(:, 1));
+            xkMinusXj = basisX(:, 3) - basisX(:, 2);
+            xiMinusXk = basisX(:, 1) - basisX(:, 3);
+            xjMinusXi = basisX(:, 2) - basisX(:, 1);
             
-            M = [ yjMinusYk, ykMinusYi, yiMinusYj ];
-            M = M + [ xkMinusXj, xiMinusXk, xjMinusXi ];
-            M = mScalar .* M;
+            % Create the sparse matrix Mt:
+            rowsX = repmat(2 .* halfedge.face().index', 1, 3);
+            rowsY = rowsX - 1;
+            columnsX = [ halfedge.from().index', halfedge.to().index', halfedge.next().to().index' ];
+            columnsY = columnsX;
+            values = [ yjMinusYk', ykMinusYi', yiMinusYj', xkMinusXj', xiMinusXk', xjMinusXi' ];
+            Mt = mScalar .* sparse([rowsY, rowsX], [columnsY, columnsX], values, 2 * mesh.num_faces, mesh.num_vertices);
             
-        end
-        
-        function M = computeElscm(face)
+            % Create the sparse matrix Mt rotated:
+            rotatedValues = [ -xkMinusXj', -xiMinusXk', -xjMinusXi', yjMinusYk', ykMinusYi', yiMinusYj' ];
+            MtRotated = mScalar .* sparse([rowsY, rowsX], [columnsY, columnsX], rotatedValues, 2 * mesh.num_faces, mesh.num_vertices);
             
-            % receive only faces
-            
-            % Get all the halfedges of the face:
-            halfedgei = face.halfedge();
-            halfedgej = halfedgei.next();
-            halfedgek = halfedgek.next();
-            
-            Ma = MeshParameterization.computeM(halfedgei);
-            Mb = MeshParameterization.computeM(halfedgej);
-            Mc = MeshParameterization.computeM(halfedgek);
-            
-            
-            
-            % Get the triangle area:
-            triangleArea = halfedge.face().getTrait('area');
-            
-            mtScalar = 1.0 ./ (2.0 .* triangleArea);
-            
-            MT = ...
-            [ mtScalar ; mtScalar ] .* ...
-            [ ...
-                orthonormalBasisY(:, 2) - orthonormalBasisY(:, 3), orthonormalBasisY(:, 3) - orthonormalBasisY(:, 1), orthonormalBasisY(:, 1) - orthonormalBasisY(:, 2) ;
-                orthonormalBasisX(:, 3) - orthonormalBasisX(:, 2), orthonormalBasisX(:, 1) - orthonormalBasisX(:, 3), orthonormalBasisX(:, 2) - orthonormalBasisX(:, 1) ...
-            ];
-                
-            
-            
+            % Compute the matrix M:
+            triangleArea = repelem(triangleArea, 2, 1);
+            M = [ -triangleArea .* MtRotated, triangleArea .* Mt ];
             
         end
         
@@ -344,11 +299,8 @@ classdef MeshParameterization < handle
             % conditions are handled by the method
             % MeshParameterization.setBCAndSolve(...), which you should
             % implement next.
-
-            M = sparse(2*mesh.num_faces, 2*mesh.num_vertices);
             
-            
-            
+            M = MeshParameterization.computeM(mesh); 
             
             uv = MeshParameterization.setBCAndSolve(M, bdry_vi, bdry_uvpos);
         end
