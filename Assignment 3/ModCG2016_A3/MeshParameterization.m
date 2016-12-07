@@ -355,7 +355,36 @@ classdef MeshParameterization < handle
             % TODO_A3 Task 2b
             % Given a linear system, substitute fixed vertex boundary
             % conditions and solve.
-            uv = zeros(size(M,2)*0.5,2);
+            
+            % Calculate vertex count, fixed uv count and unfixed uv count:
+            vertexCount = size(M,2)*0.5;
+            fixedUVCount = size(bdry_vi, 1);
+            unfixedUVCount = vertexCount - fixedUVCount;
+            
+            % Set which columns from the M matrix should be selected (u and
+            % v):
+            columnIndices = [ bdry_vi; bdry_vi + 5 ];
+            
+            % Select the columns of the known uv positions:
+            mUvColumns = M(:, columnIndices);
+            
+            % Remove the columns of the known uv positions from the M
+            % matrix:
+            M(:, columnIndices) = [];
+            
+            % Compute the right hand side of the equation -A_l * UV_fixed:
+            fixedUV = reshape(bdry_uvpos, 2 * fixedUVCount, 1);
+            b = -mUvColumns * fixedUV;
+            
+            % Solve the linear system A_f * UV_nonFixed = b:
+            nonFixedUV = M \ b;
+           
+            % Recombine fixed and non-fixed UV values into a matrix nv-by-2 matrix:
+            rows = [ repmat(setdiff(1:vertexCount, bdry_vi'), 1, 2), repmat(bdry_vi', 1, 2) ]; 
+            columns = [ ones(1, unfixedUVCount), 2 .* ones(1, unfixedUVCount), ones(1, fixedUVCount), 2 .* ones(1, fixedUVCount) ];
+            values = [ nonFixedUV', fixedUV' ];
+            uv = full(sparse(rows, columns, values, vertexCount, 2));
+            
         end
     end
 end
