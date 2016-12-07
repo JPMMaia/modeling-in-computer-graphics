@@ -183,7 +183,7 @@ classdef MeshParameterization < handle
             % For instance, if boundaryPosition = 1.4, the floor will
             % be 1 and the ceil will be 2:
             floorLimit = floor(boundaryPosition);
-            ceilLimit = ceil(boundaryPosition);
+            ceilLimit = min(5.0, max(1.0, ceil(boundaryPosition)));
 
             % Calculate the position along an edge. For instance, if
             % boundaryPosition = 1.4, the positionAlongEdge = 0.4.
@@ -206,23 +206,18 @@ classdef MeshParameterization < handle
             
         end
         
-        function [orthonormalBasisX, orthonormalBasisY]  = computeOrthonormalBasis(halfedge)
-            
-            % Get each point of the triangle:
-            xi = halfedge.from().getTrait('position');
-            xj = halfedge.to().getTrait('position');
-            xk = halfedge.next().to().getTrait('position');
+        function [orthonormalBasisX, orthonormalBasisY, orthonormalBasisZ]  = computeOrthonormalBasis(positioni, positionj, positionk)
             
             % Create the orthonormal basis vector X:
-            orthonormalBasisX = (xj - xi);
+            orthonormalBasisX = (positionj - positioni);
             orthonormalBasisX = MeshParameterization.normalize(orthonormalBasisX);
             
-            % Compute the normal to the basis:
-            basisNormal = cross(orthonormalBasisX, (xk - xi), 2);
-            basisNormal = MeshParameterization.normalize(basisNormal);
+            % Create the orthonormal basis vector Z:
+            orthonormalBasisZ = cross(orthonormalBasisX, (positionk - positioni), 2);
+            orthonormalBasisZ = MeshParameterization.normalize(orthonormalBasisZ);
             
             % Create the orthonormal basis vector Y:
-            orthonormalBasisY = cross(basisNormal, orthonormalBasisX, 2);
+            orthonormalBasisY = cross(orthonormalBasisZ, orthonormalBasisX, 2);
             
         end
         
@@ -231,33 +226,48 @@ classdef MeshParameterization < handle
             % Get the halfedge associated with each face:
             halfedge = mesh.getAllFaces().halfedge();
             
-            % Compute the orthonormal basis for the given triangle:
-            [basisX, basisY] = MeshParameterization.computeOrthonormalBasis(halfedge);
+            % Get the vertices of the triangle associated with each
+            % halfedge:
+            vertexi = halfedge.from();
+            vertexj = halfedge.to();
+            vertexk = halfedge.next().to();
             
-            % Get the area of the triangle associated with the halfedge:
-            triangleArea = halfedge.face().getTrait('area');
+            % Get the position of each vertex of the triangle:
+            positioni = vertexi.getTrait('position');
+            positionj = vertexj.getTrait('position');
+            positionk = vertexk.getTrait('position');
+            
+            % Compute the orthonormal basis for the given triangle:
+            [basisX, basisY, ~] = MeshParameterization.computeOrthonormalBasis(positioni, positionj, positionk);
+            
+            % Compute the position of each vertex with respect to the local
+            % orthonormal basis of the triangle. Since the points are in a
+            % plane, and as basisZ is perpendicular to this plane, we can
+            % ignore the Z coordinate:
+            positioni = [ dot(basisX, positioni, 2), dot(basisY, positioni, 2) ];
+            positionj = [ dot(basisX, positionj, 2), dot(basisY, positionj, 2) ];
+            positionk = [ dot(basisX, positionk, 2), dot(basisY, positionk, 2) ];
+            
+            % Compute the first row:
+            yjMinusYk = positionj(:, 2) - positionk(:, 2);
+            ykMinusYi = positionk(:, 2) - positioni(:, 2);
+            yiMinusYj = positioni(:, 2) - positionj(:, 2);
+            
+            % Compute the second row:
+            xkMinusXj = positionk(:, 1) - positionj(:, 1);
+            xiMinusXk = positioni(:, 1) - positionk(:, 1);
+            xjMinusXi = positionj(:, 1) - positioni(:, 1);
             
             % Compute the scalar which is applied to each element of the
             % matrix:
+            triangleArea = halfedge.face().getTrait('area');
             mScalar = 1.0 ./ (2.0 .* triangleArea);
-            
-            % Repeat each element into a 2-by-1 block of a new matrix:
             mScalar = repelem(mScalar, 2, 1);
-            
-            % Compute the first row:
-            yjMinusYk = basisY(:, 2) - basisY(:, 3);
-            ykMinusYi = basisY(:, 3) - basisY(:, 1);
-            yiMinusYj = basisY(:, 1) - basisY(:, 2);
-            
-            % Compute the second row:
-            xkMinusXj = basisX(:, 3) - basisX(:, 2);
-            xiMinusXk = basisX(:, 1) - basisX(:, 3);
-            xjMinusXi = basisX(:, 2) - basisX(:, 1);
             
             % Create the sparse matrix Mt:
             rowsX = repmat(2 .* halfedge.face().index', 1, 3);
             rowsY = rowsX - 1;
-            columnsX = [ halfedge.from().index', halfedge.to().index', halfedge.next().to().index' ];
+            columnsX = [ vertexi.index', vertexj.index', vertexk.index' ];
             columnsY = columnsX;
             values = [ yjMinusYk', ykMinusYi', yiMinusYj', xkMinusXj', xiMinusXk', xjMinusXi' ];
             Mt = mScalar .* sparse([rowsY, rowsX], [columnsY, columnsX], values, 2 * mesh.num_faces, mesh.num_vertices);
