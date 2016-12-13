@@ -269,7 +269,7 @@ classdef MeshParameterization < handle
             % Create the sparse matrix Mt:
             rowsX = repmat(2 .* halfedge.face().index', 1, 3);
             rowsY = rowsX - 1;
-            columnsX = [ vertexi.index', vertexj.index', vertexk.index' ];
+            columnsX = [ vertexk.index', vertexi.index', vertexj.index' ];
             columnsY = columnsX;
             values = [ yjMinusYk', ykMinusYi', yiMinusYj', xkMinusXj', xiMinusXk', xjMinusXi' ];
             Mt = mScalar .* sparse([rowsY, rowsX], [columnsY, columnsX], values, 2 * mesh.num_faces, mesh.num_vertices);
@@ -375,7 +375,7 @@ classdef MeshParameterization < handle
             
             % Set which columns from the M matrix should be selected (u and
             % v):
-            columnIndices = [ bdry_vi; bdry_vi + 5 ];
+            columnIndices = [ bdry_vi; bdry_vi + vertexCount ];
             
             % Select the columns of the known uv positions:
             mUvColumns = M(:, columnIndices);
