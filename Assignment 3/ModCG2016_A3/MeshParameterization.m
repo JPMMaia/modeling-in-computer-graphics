@@ -116,13 +116,15 @@ classdef MeshParameterization < handle
                 
             end
             
-            % Calculate the angle associated with each vertex:
-            angles = cumsum(deltaAngle);
+            % Calculate the angle associated with each vertex. The angles
+            % are negative, so that the vertices are placed in clockwise
+            % order:
+            angles = -cumsum(deltaAngle);
 
             % The position of each vertex is calculated using polar
             % coordinates:
             % [centerX + radius * cos(angle), centerY + radius * sin(angle)]
-            uvpos = repmat(center, halfedgeCount, 1)  + radius .* [ cos(angles) , sin(angles) ];
+            uvpos = repmat(center, halfedgeCount, 1) + radius .* [ cos(angles) , sin(angles) ];
             
         end
         
@@ -145,7 +147,7 @@ classdef MeshParameterization < handle
             % Distribute boundary points uniformly along a square.
             
             % Define the limits of the square boundary:
-            squareBoundaryLimits = [ 0.0, 0.0 ; 1.0, 0.0 ; 1.0, 1.0 ; 0.0, 1.0 ; 0.0, 0.0 ];
+            squareBoundaryLimits = [ 0.0, 0.0 ; 0.0, 1.0 ; 1.0, 1.0 ; 1.0, 0.0 ; 0.0, 0.0 ];
 
             % Get the number of halfedges:
             halfedgeCount = length(bdry_hei);
