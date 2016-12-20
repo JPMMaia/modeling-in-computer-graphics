@@ -269,7 +269,7 @@ classdef MeshParameterization < handle
             % Create the sparse matrix Mt:
             rowsX = repmat(2 .* halfedge.face().index', 1, 3);
             rowsY = rowsX - 1;
-            columnsX = [ vertexk.index', vertexi.index', vertexj.index' ];
+            columnsX = [ vertexi.index', vertexj.index', vertexk.index' ];
             columnsY = columnsX;
             values = [ yjMinusYk', ykMinusYi', yiMinusYj', xkMinusXj', xiMinusXk', xjMinusXi' ];
             Mt = mScalar .* sparse([rowsY, rowsX], [columnsY, columnsX], values, 2 * mesh.num_faces, mesh.num_vertices);
